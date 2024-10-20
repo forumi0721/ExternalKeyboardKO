@@ -1,0 +1,87 @@
+<resources>
+    <!-- 앱 정보 관련 -->
+    <string name="app_name">External Keyboard KO</string>
+    <string name="app_title">External Keyboard KO</string>
+    <string name="app_descrption">외장 키보드만을 위한 간단한 한글 입력기입니다.</string>
+    <string name="by_stonecold">by StoneCold</string>
+
+    <!-- 서브타입 관련 -->
+    <string name="subtype_korean">한국어</string>
+    <string name="subtype_english">English</string>
+    <string name="subtype_generic">영어 및 한글</string>
+    <string name="subtype_settings_title">한글/영문 사용을 위해 모두 활성화 필요</string>
+
+    <!-- 메시지 -->
+    <string name="korean">한글</string>
+    <string name="english">영문</string>
+
+    <!-- 설정 항목 관련 -->
+    <string name="keyboard_settings_title">키보드 설정</string>
+    <string name="input_method_settings_title">입력기 설정</string>
+    <string name="keyboard_activation_title">키보드 활성화</string>
+    <string name="change_input_method_title">입력 방법 변경</string>
+
+    <!-- 키보드 레이아웃 관련 -->
+    <string name="english_keyboard_title">영문 배열</string>
+    <string name="english_keyboard_desc">영문 자판의 Qwerty, Dvorak 자판 배열을 설정합니다.</string>
+    <string name="english_qwerty">쿼티 (Qwerty)</string>
+    <string name="english_dvorak">드보락 (Dvorak)</string>
+    <string name="english_colemak">콜맥 (Colemak)</string>
+
+    <string name="korean_keyboard_title">한글 배열</string>
+    <string name="korean_keyboard_desc">한글 자판의 두벌식, 세벌식 등 자판 배열을 설정합니다.</string>
+    <string name="hangul_2">두벌식</string>
+    <string name="hangul_2y">두벌식 옛글</string>
+    <string name="hangul_3f">세벌식 최종</string>
+    <string name="hangul_39">세벌식 390</string>
+    <string name="hangul_3s">세벌식 순아래</string>
+    <string name="hangul_3y">세벌식 옛글</string>
+    <string name="hangul_ahn">세벌식 안마태</string>
+    <string name="hangul_32">세벌식 두벌배열</string>
+    <string name="hangul_ro">로마자</string>
+
+    <!-- 한글 입력기 옵션 -->
+    <string name="hangul_non_choseong_combi_title">초성 겹자음 허용 (두벌식)</string>
+    <string name="hangul_non_choseong_combi_desc">두벌식 자판에서 초성에 없는 겹자음을 허용합니다.</string>
+    <string name="hangul_combi_on_double_stroke_title">된소리 조합 (두벌식)</string>
+    <string name="hangul_combi_on_double_stroke_desc">두벌식 자판에서 자음 연타로 된소리 조합을 설정합니다.</string>
+    <string name="hangul_auto_reorder_title">자동 순서 교정 (세벌식)</string>
+    <string name="hangul_auto_reorder_desc">모아치기 설정을 활성화합니다.</string>
+
+    <!-- 한/영 전환 메시지 -->
+    <string name="input_mode_statusbar_message_title">Statusbar 알림 활성화</string>
+    <string name="input_mode_statusbar_message_desc">한/영 상태를 Statusbar에 표시합니다.</string>
+    <string name="input_mode_toast_message_title">한/영 전환 알림</string>
+    <string name="input_mode_toast_message_desc">한/영 전환시 토스트 메시지를 출력합니다.</string>
+
+    <!-- 옵션 설정 관련 -->
+    <string name="use_esc_english_mode">ESC 영문 모드 젼환</string>
+    <string name="use_esc_english_desc">ESC를 누를때 영문으로 전환합니다.</string>
+    <string name="use_left_shift_space_title">Left Shift + Space로 한/영 전환</string>
+    <string name="use_left_shift_space_desc">Left Shift + Space를 눌러 한/영 모드 전환합니다.</string>
+    <string name="use_right_shift_space_title">Right Shift + Space로 한자 입력</string>
+    <string name="use_right_shift_space_desc">Left Shift + Space를 눌러 한자를 입력합니다.</string>
+    <string name="use_right_alt_title">Right Alt로 한/영 전환</string>
+    <string name="use_right_alt_desc">Right Alt 키로 한/영 전환합니다.</string>
+    <string name="use_right_ctrl_title">Right Ctrl로 한자 입력</string>
+    <string name="use_right_ctrl_desc">Right Ctrl 키로 한자를 입력합니다.</string>
+    <string name="use_ctrl_grave_to_esc_title">Ctrl + ~ ESC 맵핑</string>
+    <string name="use_ctrl_grave_to_esc_desc">Ctrl + ~을 ESC로 맵핑합니다.</string>
+    <string name="use_ctrl_number_to_function_title">Ctrl + Number(-=) FN 맵핑</string>
+    <string name="use_ctrl_number_to_function_title_desc">Ctrl + Number(-=)을 F1-F12로 맵핑합니다.</string>
+
+    <!-- 공지사항 -->
+    <string name="notice">Notice</string>
+    <string name="feature_not_guaranteed">완벽한 기능 동작을 보장하지 않습니다.</string>
+    <string name="notice_libhangul_use">입력기 오토마타는 libhangul을 사용하여 구현했습니다.</string>
+    <string name="notice_additional_info">libhangul에서 한글만 처리하고 나머지는 기본 IME를 사용합니다.</string>
+
+    <!-- 메시지 -->
+    <string name="msg_post_notifications_grant">알림 권한이 승인되었습니다.</string>
+    <string name="msg_post_notifications_deny">알림 권한이 거부되었습니다.</string>
+    <string name="msg_post_notifications_toast">Toast 알림을 받으려면 권한이 필요합니다.</string>
+
+    <!-- 테스트 관련 -->
+    <string name="input_test">입력 테스트</string>
+    <string name="select">선택</string>
+</resources>
