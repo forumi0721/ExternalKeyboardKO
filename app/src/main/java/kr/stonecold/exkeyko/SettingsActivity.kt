@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -33,6 +34,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
+import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.core.content.ContextCompat
 import kr.stonecold.exkeyko.ui.theme.ExKeyKOTheme
 
@@ -44,6 +47,9 @@ class SettingsActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestNotificationPermissionIfNeeded()
         }
+
+        //Overlay 권한 요청
+        checkAndRequestOverlayPermission()
 
         // 설정 화면을 구성하는 Composable 함수 호출
         setContent {
@@ -70,7 +76,6 @@ class SettingsActivity : ComponentActivity() {
             shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS) -> {
                 Toast.makeText(this, getString(R.string.msg_post_notifications_toast), Toast.LENGTH_SHORT).show()
             }
-
             else -> {
                 // 권한 요청
                 registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
@@ -83,6 +88,16 @@ class SettingsActivity : ComponentActivity() {
             }
         }
     }
+
+    fun checkAndRequestOverlayPermission(): Boolean {
+        if (Settings.canDrawOverlays(this)) {
+            return true
+        }
+        // 권한이 없을 경우 권한 요청
+        val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+        val REQUEST_OVERLAY_PERMISSION = 1001  // 권한 요청 코드
+        return startActivityIfNeeded(intent, REQUEST_OVERLAY_PERMISSION)
+    }
 }
 
 @Composable
@@ -92,6 +107,8 @@ fun SettingsScreen(context: Context) {
     // 상태 변수로 설정 값을 관리
     var selectedEnglishKeyboard by remember { mutableStateOf(prefs.getString("pref_english_layout", PreferenceDefaults.pref_english_layout) ?: PreferenceDefaults.pref_english_layout) }
     var selectedKoreanKeyboard by remember { mutableStateOf(prefs.getString("pref_hangul_layout", PreferenceDefaults.pref_hangul_layout) ?: PreferenceDefaults.pref_hangul_layout) }
+    var selectedHanjaSelectType by remember { mutableStateOf(prefs.getString("pref_hanja_select_type", PreferenceDefaults.pref_hanja_select_type) ?: PreferenceDefaults.pref_hanja_select_type) }
+    selectedHanjaSelectType = if (Settings.canDrawOverlays(context)) selectedHanjaSelectType else "c"
     var isAutoReorderEnabled by remember { mutableStateOf(prefs.getBoolean("pref_hangul_auto_reorder", PreferenceDefaults.pref_hangul_auto_reorder)) }
     var isCombiOnDoubleStrokeEnabled by remember { mutableStateOf(prefs.getBoolean("pref_hangul_combi_on_double_stroke", PreferenceDefaults.pref_hangul_combi_on_double_stroke)) }
     var isNonChoseongCombiEnabled by remember { mutableStateOf(prefs.getBoolean("pref_hangul_non_choseong_combi", PreferenceDefaults.pref_hangul_non_choseong_combi)) }
@@ -121,6 +138,10 @@ fun SettingsScreen(context: Context) {
         stringResource(R.string.hangul_32) to "32",
         stringResource(R.string.hangul_ahn) to "ahn",
         stringResource(R.string.hangul_ro) to "ro",
+    )
+    val optionHanjaOverlay = listOf(
+        stringResource(R.string.hanja_candidates) to "c",
+        stringResource(R.string.hanja_overlay) to "o",
     )
 
     // 설정 화면 레이아웃
@@ -213,6 +234,21 @@ fun SettingsScreen(context: Context) {
                     onKeyboardSelected = { newValue ->
                         selectedKoreanKeyboard = newValue
                         savePreference(prefs, "pref_hangul_layout", newValue)
+                    }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OptionItemHanjaOverlay(
+                    title = stringResource(R.string.hanja_select_type_title),
+                    description = stringResource(R.string.hanja_select_type_overlay),
+                    options = optionHanjaOverlay,
+                    selectedOption = selectedHanjaSelectType,
+                    onOptionSelected = { newValue ->
+                        if (newValue == "o" && (!(context as SettingsActivity).checkAndRequestOverlayPermission())) {
+                            selectedHanjaSelectType = "c"
+                        } else {
+                            selectedHanjaSelectType = newValue
+                            savePreference(prefs, "pref_hanja_select_type", newValue)
+                        }
                     }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -453,6 +489,65 @@ fun OptionItemKeyboard(
                     DropdownMenuItem(
                         onClick = {
                             onKeyboardSelected(value)
+                            expanded = false
+                        },
+                        text = { Text(option) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun OptionItemHanjaOverlay(
+    title: String,
+    description: String,
+    options: List<Pair<String, String>>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(
+                text = title,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = description,
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+        }
+
+        // 오른쪽: DropdownMenu
+        Box(
+            modifier = Modifier.align(Alignment.CenterVertically)
+        ) {
+            var expanded by remember { mutableStateOf(false) }
+
+            Button(onClick = { expanded = !expanded }) {
+                Text(text = options.firstOrNull { it.second == selectedOption }?.first ?: stringResource(R.string.select))
+            }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                options.forEach { (option, value) ->
+                    DropdownMenuItem(
+                        onClick = {
+                            onOptionSelected(value)
                             expanded = false
                         },
                         text = { Text(option) }

@@ -19,6 +19,12 @@ object PreferenceDefaults {
     var pref_hangul_layout: String = "2"
 
     /**
+     * 한자 입력 방식 설정
+     * 후보뷰로 초기화
+     */
+    var pref_hanja_select_type: String = "o"
+
+    /**
      * 자동 순서 교정 옵션 (모아치기)
      * 기본값: true
      */

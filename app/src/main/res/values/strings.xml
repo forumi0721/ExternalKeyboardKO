@@ -40,6 +40,11 @@
     <string name="hangul_32">세벌식 두벌배열</string>
     <string name="hangul_ro">로마자</string>
 
+    <string name="hanja_select_type_title">한자 선택 방식</string>
+    <string name="hanja_select_type_overlay">후보키, Overlay 방식중 선택합니다. (후보키 말을 잘안들음, Overlay 권한필요)</string>
+    <string name="hanja_candidates">후보키</string>
+    <string name="hanja_overlay">Overlay</string>
+
     <!-- 한글 입력기 옵션 -->
     <string name="hangul_non_choseong_combi_title">초성 겹자음 허용 (두벌식)</string>
     <string name="hangul_non_choseong_combi_desc">두벌식 자판에서 초성에 없는 겹자음을 허용합니다.</string>
