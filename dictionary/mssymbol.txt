@@ -1,0 +1,1 @@
+../libhangul/data/hanja/mssymbol.txt

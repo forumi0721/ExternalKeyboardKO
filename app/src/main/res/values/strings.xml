@@ -19,6 +19,7 @@
     <string name="keyboard_settings_title">키보드 설정</string>
     <string name="input_method_settings_title">입력기 설정</string>
     <string name="keyboard_activation_title">키보드 활성화</string>
+    <string name="subtype_select_ttitle">한/영 활성화</string>
     <string name="change_input_method_title">입력 방법 변경</string>
 
     <!-- 키보드 레이아웃 관련 -->
@@ -42,8 +43,9 @@
 
     <string name="hanja_select_type_title">한자 선택 방식</string>
     <string name="hanja_select_type_overlay">후보키, Overlay 방식중 선택합니다. (후보키 말을 잘안들음, Overlay 권한필요)</string>
+    <string name="hanja_overlay_vertical">Overlay (세로)</string>
+    <string name="hanja_overlay_horizontal">Overlay (가로)</string>
     <string name="hanja_candidates">후보키</string>
-    <string name="hanja_overlay">Overlay</string>
 
     <!-- 한글 입력기 옵션 -->
     <string name="hangul_non_choseong_combi_title">초성 겹자음 허용 (두벌식)</string>
@@ -77,11 +79,13 @@
 
     <!-- 공지사항 -->
     <string name="notice">Notice</string>
-    <string name="feature_not_guaranteed">완벽한 기능 동작을 보장하지 않습니다.</string>
-    <string name="notice_libhangul_use">입력기 오토마타는 libhangul을 사용하여 구현했습니다.</string>
-    <string name="notice_additional_info">libhangul에서 한글만 처리하고 나머지는 기본 IME를 사용합니다.</string>
+    <string name="feature_not_guaranteed">※ 완벽한 기능 동작을 보장하지 않습니다.</string>
+    <string name="notice_additional_info">※ 한글 처리는 libhangul, 영문은 기본입력기로 처리합니다.</string>
 
     <!-- 메시지 -->
+    <string name="msg_permissions">모든 기능 사용을 위해서 알림과 Overlay 권한이 필요합니다.</string>
+    <string name="msg_permission_notification">Toast 출력을 위해 알림 권한이 필요합니다.</string>
+    <string name="msg_permission_overlay">Overylay 사용을 위해서는 권한이 필요합니다.</string>
     <string name="msg_post_notifications_grant">알림 권한이 승인되었습니다.</string>
     <string name="msg_post_notifications_deny">알림 권한이 거부되었습니다.</string>
     <string name="msg_post_notifications_toast">Toast 알림을 받으려면 권한이 필요합니다.</string>

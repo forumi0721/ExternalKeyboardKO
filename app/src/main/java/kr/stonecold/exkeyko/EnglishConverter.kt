@@ -3,50 +3,70 @@ package kr.stonecold.exkeyko
 import android.util.Log
 
 /**
- * QWERTY에서 Colemak 및 Dvorak으로 키 매핑을 담당하는 클래스
+ * QWERTY에서 Colemak 및 Dvorak으로 키 매핑을 담당하는 클래스입니다.
  * 레이아웃을 동적으로 선택할 수 있습니다.
  */
 class EnglishConverter {
 
+    // 현재 사용 중인 키보드 레이아웃 타입 ("q", "c", "d")
     private var layoutType = "q" // 기본값은 QWERTY 레이아웃
 
+    // QWERTY에서 Colemak으로의 소문자 키 매핑
     private val qwertyToColemakLowerCaseMap = mapOf(
+        // Row 1
         'q' to 'q', 'w' to 'w', 'e' to 'f', 'r' to 'p', 't' to 'g',
         'y' to 'j', 'u' to 'l', 'i' to 'u', 'o' to 'y', 'p' to ';',
+        // Row 2
         'a' to 'a', 's' to 'r', 'd' to 's', 'f' to 't', 'g' to 'd',
         'h' to 'h', 'j' to 'n', 'k' to 'e', 'l' to 'i', ';' to 'o',
+        // Row 3
         'z' to 'z', 'x' to 'x', 'c' to 'c', 'v' to 'v', 'b' to 'b',
         'n' to 'k', 'm' to 'm'
     )
+
+    // QWERTY에서 Colemak으로의 대문자 키 매핑
     private val qwertyToColemakUpperCaseMap = mapOf(
+        // Row 1
         'Q' to 'Q', 'W' to 'W', 'E' to 'F', 'R' to 'P', 'T' to 'G',
         'Y' to 'J', 'U' to 'L', 'I' to 'U', 'O' to 'Y', 'P' to ':',
+        // Row 2
         'A' to 'A', 'S' to 'R', 'D' to 'S', 'F' to 'T', 'G' to 'D',
         'H' to 'H', 'J' to 'N', 'K' to 'E', 'L' to 'I', ':' to 'O',
+        // Row 3
         'Z' to 'Z', 'X' to 'X', 'C' to 'C', 'V' to 'V', 'B' to 'B',
         'N' to 'K', 'M' to 'M'
     )
 
+    // QWERTY에서 Dvorak으로의 소문자 키 매핑
     private val qwertyToDvorakLowerCaseMap = mapOf(
+        // Row 1
         'q' to '\'', 'w' to ',', 'e' to '.', 'r' to 'p', 't' to 'y',
         'y' to 'f', 'u' to 'g', 'i' to 'c', 'o' to 'r', 'p' to 'l',
+        // Row 2
         'a' to 'a', 's' to 'o', 'd' to 'e', 'f' to 'u', 'g' to 'i',
-        'h' to 'd', 'j' to 'h', 'k' to 't', 'l' to 'n', 'n' to ';',
-        'z' to '/', 'x' to 'q', 'c' to 'j', 'v' to 'k', 'b' to 'x',
-        'm' to 'w', ',' to 'v', '.' to 'z', '/' to '/'
+        'h' to 'd', 'j' to 'h', 'k' to 't', 'l' to 'n', ';' to 's',
+        // Row 3
+        'z' to ';', 'x' to 'q', 'c' to 'j', 'v' to 'k', 'b' to 'x',
+        'n' to 'b', 'm' to 'm', ',' to 'w', '.' to 'v', '/' to 'z'
     )
+
+    // QWERTY에서 Dvorak으로의 대문자 키 매핑
     private val qwertyToDvorakUpperCaseMap = mapOf(
+        // Row 1
         'Q' to '"', 'W' to '<', 'E' to '>', 'R' to 'P', 'T' to 'Y',
         'Y' to 'F', 'U' to 'G', 'I' to 'C', 'O' to 'R', 'P' to 'L',
+        // Row 2
         'A' to 'A', 'S' to 'O', 'D' to 'E', 'F' to 'U', 'G' to 'I',
-        'H' to 'D', 'J' to 'H', 'K' to 'T', 'L' to 'N', 'N' to ':',
-        'Z' to '?', 'X' to 'Q', 'C' to 'J', 'V' to 'K', 'B' to 'X',
-        'M' to 'W', '<' to 'V', '>' to 'Z', '?' to '?'
+        'H' to 'D', 'J' to 'H', 'K' to 'T', 'L' to 'N', ':' to 'S',
+        // Row 3
+        'Z' to ':', 'X' to 'Q', 'C' to 'J', 'V' to 'K', 'B' to 'X',
+        'N' to 'B', 'M' to 'M', '<' to 'W', '>' to 'V', '?' to 'Z'
     )
 
     /**
      * 현재 레이아웃 타입을 설정합니다.
-     * @param layout "c"는 Colemak, "d"는 Dvorak을 나타냅니다.
+     * "c"는 Colemak, "d"는 Dvorak, 그 외는 QWERTY를 나타냅니다.
+     * @param layout String 설정할 레이아웃 타입입니다.
      */
     fun setLayout(layout: String) {
         layoutType = layout
@@ -56,17 +76,24 @@ class EnglishConverter {
     /**
      * 입력된 문자를 현재 설정된 레이아웃에 따라 변환합니다.
      * 대소문자를 구분하여 변환하며, 매핑이 없는 경우 원래 문자를 반환합니다.
-     * @param inputChar 변환할 문자
-     * @return 변환된 문자 또는 원래 문자
+     * @param inputChar Char 변환할 문자입니다.
+     * @return Char 변환된 문자 또는 원래 문자입니다.
      */
     fun convert(inputChar: Char): Char {
         val convertedChar = when (layoutType) {
-            "c" -> qwertyToColemakLowerCaseMap[inputChar] ?: qwertyToColemakUpperCaseMap[inputChar] ?: inputChar
-            "d" -> qwertyToDvorakLowerCaseMap[inputChar] ?: qwertyToDvorakUpperCaseMap[inputChar] ?: inputChar
+            "c" -> qwertyToColemakLowerCaseMap[inputChar]
+                ?: qwertyToColemakUpperCaseMap[inputChar]
+                ?: inputChar
+            "d" -> qwertyToDvorakLowerCaseMap[inputChar]
+                ?: qwertyToDvorakUpperCaseMap[inputChar]
+                ?: inputChar
             else -> inputChar
         }
 
-        Log.d("EnglishConverter", "Input character '$inputChar' converted to '$convertedChar' using layout '$layoutType'")
+        Log.d(
+            "EnglishConverter",
+            "Input character '$inputChar' converted to '$convertedChar' using layout '$layoutType'"
+        )
         return convertedChar
     }
 }

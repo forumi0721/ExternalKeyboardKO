@@ -1,0 +1,1 @@
+../../../../dictionary/dictionary_min.txt

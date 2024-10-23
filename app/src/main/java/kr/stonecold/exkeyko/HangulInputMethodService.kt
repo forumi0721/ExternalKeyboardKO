@@ -1,6 +1,7 @@
 package kr.stonecold.exkeyko
 
 import android.Manifest
+import android.content.ComponentName
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -15,15 +16,30 @@ import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
+import android.view.inputmethod.InputMethodManager
+import android.view.inputmethod.InputMethodSubtype
 import android.widget.Toast
-import androidx.core.content.ContextCompat.*
 
+/**
+ * 한글 입력 메서드 서비스 클래스입니다.
+ * 키 입력 처리 및 한/영 전환, 한자 변환 등을 담당합니다.
+ */
 class HangulInputMethodService : InputMethodService(), SharedPreferences.OnSharedPreferenceChangeListener {
 
     // 입력 처리 관련 변수
     private lateinit var hangulInputProcessor: HangulInputProcessor
     private val englishConverter = EnglishConverter()
-    private var isKoreanMode = false  // 한글/영문 모드
+    private var currentImputMode:InputMode = InputMode.ENGLISH
+    private enum class InputMode { ENGLISH, KOREAN, }
+
+    // Subtype
+    private var switchLanguageMode: () -> Unit
+        get() = if (PreferenceDefaults.system_use_subtype) {
+            ::switchLanguageModeSubtype
+        } else {
+            ::switchLanguageModeToggle
+        }
+        set(_) { }
 
     // 설정 변수
     private lateinit var prefs: SharedPreferences
@@ -43,11 +59,13 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
     private var prefUseCtrlNumberToFunction: Boolean = PreferenceDefaults.pref_use_ctrl_number_to_function
     private var prefUseCtrlGraveToEsc: Boolean = PreferenceDefaults.pref_use_ctrl_grave_to_esc
 
-    private var prefHanjaUseOverlay:Boolean = true
+    private var prefHanjaUseOverlay: Boolean = true
 
     // 화면 표시 관련 변수
     private var toast: Toast? = null
-    private var candidateScrollView: CandidateScrollView? = null
+    private val candidateScrollView: CandidateScrollView by lazy {
+        CandidateScrollView(this)
+    }
     private var hanjaOverlay: HanjaOverlay? = null
 
     override fun onCreate() {
@@ -65,53 +83,60 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
         loadPreferences()
     }
 
+    /**
+     * 입력 시작시 Statusbar 표시를 위해 onStartInputㄹ들 override 합니다.
+     * @param attribute EditorInfo? 기본 파라디터입니다.
+     * @param restarting Boolean 기본 파라디터입니다.
+     */
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
-        super.onStartInput(attribute, restarting)
-
+         super.onStartInput(attribute, restarting)
         showLanguageMode(false)
     }
 
-    override fun onCreateInputView(): View? {
+    /**
+     * 키보드를 보이지 않기 위해 onCreateInputView를 override 합니다.
+     * @return View Dummy view 입니다.
+     */
+    override fun onCreateInputView(): View {
         val dummyView = View(this)
         dummyView.visibility = View.GONE
         return dummyView
     }
 
+    /**
+     * 키보드를 보이지 않기 위해 onEvaluateFullscreenMode를 override 합니다.
+     * @return Boolean 숨기기 처리합니다.
+     */
     override fun onEvaluateFullscreenMode(): Boolean {
         return false
     }
 
+    /**
+     * 키보드를 보이지 않기 위해 onEvaluateInputViewShown를 override 합니다.
+     * @return Boolean 숨기기 처리합니다.
+     */
     override fun onEvaluateInputViewShown(): Boolean {
         super.onEvaluateInputViewShown()
         return false
     }
 
+    /**
+     * Custom 후보키 View를 사용하기 위해 onCreateCandidatesView를 override 합니다.
+     * @return View 후보키 View 입니다.
+     */
     override fun onCreateCandidatesView(): View {
-        candidateScrollView = CandidateScrollView(this)
-        return candidateScrollView!!
-    }
-
-    override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
-        super.onStartInputView(info, restarting)
-
-        showLanguageMode(false)
-    }
-
-    override fun onFinishInputView(finishingInput: Boolean) {
-        super.onFinishInputView(finishingInput)
-        hideStatusIcon()
+        return candidateScrollView
     }
 
     /**
-     * 키가 눌릴 때 호출되는 메서드
-     * @param keyCode Int 눌린 키의 코드
-     * @param event KeyEvent 키 이벤트 객체
-     * @return Boolean 처리 여부
+     * 키가 눌릴 때 호출되는 메서드입니다.
+     * @param keyCode Int 눌린 키의 코드입니다.
+     * @param event KeyEvent 키 이벤트 객체입니다.
+     * @return Boolean 처리 여부를 반환합니다.
      */
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         val inputConnection = currentInputConnection ?: return false
 
-        // Shift, Alt, Ctrl 키 눌림 상태와 keyCode 및 event 값 로그 출력
         //Log.d("KeyEvent", "keyCode: $keyCode (${KeyEvent.keyCodeToString(keyCode)})")
         //Log.d("KeyEvent", "event: $event")
         //Log.d("KeyEvent", "Shift 상태: ${event.isShiftPressed}")
@@ -127,29 +152,24 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
         if (keyCode == KeyEvent.KEYCODE_ESCAPE && event.metaState == 0) {
             if (prefUseEscEnglishMode && isKoreanMode()) {
                 updateComposingState(inputConnection, true)
-                // 현재 모드가 이미 영어라면 서브타입 전환하지 않음
-                if (isKoreanMode()) {
-                    switchLanguageMode()
-                }
+                switchLanguageMode()
             }
-            return super.onKeyDown(keyCode, event)  // 기본 키 처리
+            return super.onKeyDown(keyCode, event)
         }
 
-        // 한영 전환: Shift + Space 또는 Right ALT
-        //if ((prefUseRightAlt && event.isAltPressed && keyCode == KeyEvent.KEYCODE_ALT_RIGHT) ||
-        //    (prefUseLeftShiftSpace && event.isShiftPressed && (event.metaState and KeyEvent.META_SHIFT_LEFT_ON) != 0 && keyCode == KeyEvent.KEYCODE_SPACE)) {
+        // 한영 전환: Right ALT 또는 Left Shift + Space
         if ((prefUseRightAlt && keyCode == KeyEvent.KEYCODE_ALT_RIGHT) ||
-            (prefUseLeftShiftSpace && (event.metaState and KeyEvent.META_SHIFT_LEFT_ON) != 0 && keyCode == KeyEvent.KEYCODE_SPACE)) {
+            (prefUseLeftShiftSpace && (event.metaState and KeyEvent.META_SHIFT_LEFT_ON) != 0 && keyCode == KeyEvent.KEYCODE_SPACE)
+        ) {
             updateComposingState(inputConnection, true)
             switchLanguageMode()
             return true  // 한영 전환 처리 완료
         }
 
         // Ctrl+~를 ESC로 변환
-        //if (prefUseCtrlGraveToEsc && event.isCtrlPressed && keyCode == KeyEvent.KEYCODE_GRAVE) {
-        if (prefUseCtrlGraveToEsc && (event.metaState and KeyEvent.META_CTRL_LEFT_ON) != 0 && keyCode == KeyEvent.KEYCODE_GRAVE) {
+        if (prefUseCtrlGraveToEsc && event.isCtrlPressed && keyCode == KeyEvent.KEYCODE_GRAVE) {
             val newKeyCode = KeyEvent.KEYCODE_ESCAPE
-            val newMetaState = event.metaState and KeyEvent.META_CTRL_ON.inv() and KeyEvent.META_CTRL_LEFT_ON.inv()
+            val newMetaState = event.metaState and KeyEvent.META_CTRL_MASK.inv()
             val newEvent = KeyEvent(
                 event.downTime,
                 event.eventTime,
@@ -163,8 +183,7 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
         }
 
         // Ctrl+Number(-=)를 F1-F12로 변환
-        //if (prefUseCtrlNumberToFunction && event.isCtrlPressed) {
-        if (prefUseCtrlNumberToFunction && (event.metaState and KeyEvent.META_CTRL_LEFT_ON) != 0) {
+        if (prefUseCtrlNumberToFunction && event.isCtrlPressed) {
             val newKeyCode = when (keyCode) {
                 KeyEvent.KEYCODE_1 -> KeyEvent.KEYCODE_F1
                 KeyEvent.KEYCODE_2 -> KeyEvent.KEYCODE_F2
@@ -181,7 +200,7 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
                 else -> null
             }
             if (newKeyCode != null) {
-                val newMetaState = event.metaState and KeyEvent.META_CTRL_ON.inv() and KeyEvent.META_CTRL_LEFT_ON.inv()
+                val newMetaState = event.metaState and KeyEvent.META_CTRL_MASK.inv()
                 val newEvent = KeyEvent(
                     event.downTime,
                     event.eventTime,
@@ -207,11 +226,10 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
                     return true
                 }
             }
-
             return super.onKeyDown(keyCode, event)
         }
 
-        // Ctrl, Alt, Fn 등의 특수 키가 눌렸을 경우 ASCII로 처리
+        // 특수 키 처리
         if (event.isCtrlPressed || event.isAltPressed || event.isMetaPressed) {
             val asciiChar = event.unicodeChar.toChar()
             if (asciiChar != 0.toChar()) {
@@ -220,24 +238,10 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
             }
         }
 
-        //// 방향키 입력시 강제 커밋
-        //if (keyCode in arrayOf(
-        //        KeyEvent.KEYCODE_DPAD_LEFT,
-        //        KeyEvent.KEYCODE_DPAD_RIGHT,
-        //        KeyEvent.KEYCODE_DPAD_UP,
-        //        KeyEvent.KEYCODE_DPAD_DOWN
-        //    )
-        //) {
-        //    if (!hangulInputProcessor.isEmpty()) {
-        //        updateComposingState(inputConnection, true)
-        //        return true
-        //    }
-        //    return super.onKeyDown(keyCode, event)
-        //}
-
         // 한자 입력 처리
-        if ((prefUseRightCtrl && (event.metaState and KeyEvent.META_CTRL_ON) !=0 && keyCode == KeyEvent.KEYCODE_CTRL_RIGHT) ||
-            (prefUseRightShiftSpace && (event.metaState and KeyEvent.META_SHIFT_RIGHT_ON) != 0 && keyCode == KeyEvent.KEYCODE_SPACE)) {
+        if ((prefUseRightCtrl && keyCode == KeyEvent.KEYCODE_CTRL_RIGHT) ||
+            (prefUseRightShiftSpace && (event.metaState and KeyEvent.META_SHIFT_RIGHT_ON) != 0 && keyCode == KeyEvent.KEYCODE_SPACE)
+        ) {
             handleHanjaInput(inputConnection)
             return true
         }
@@ -263,7 +267,7 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
                 }
                 return true
             } else {
-                if ((event.metaState and KeyEvent.META_SHIFT_ON) == 0) {
+                if (!event.isShiftPressed) {
                     updateComposingState(inputConnection, true)
                 }
             }
@@ -273,26 +277,23 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
     }
 
     /**
-     * 키 업 이벤트 처리 메서드
-     * @param keyCode Int 키 코드
-     * @param event KeyEvent? 키 이벤트 객체
-     * @return Boolean 처리 여부
+     * 키 업 이벤트 처리 메서드입니다.
+     * @param keyCode Int 키 코드입니다.
+     * @param event KeyEvent? 키 이벤트 객체입니다.
+     * @return Boolean 처리 여부를 반환합니다.
      */
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
         val inputConnection = currentInputConnection ?: return false
 
-        // 방향키 입력시 강제 커밋
-        if (keyCode in arrayOf(
-                KeyEvent.KEYCODE_DPAD_LEFT,
-                KeyEvent.KEYCODE_DPAD_RIGHT,
-                KeyEvent.KEYCODE_DPAD_UP,
-                KeyEvent.KEYCODE_DPAD_DOWN
-            )
+        // 방향키 입력 시 강제 커밋
+        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
+            keyCode == KeyEvent.KEYCODE_DPAD_RIGHT ||
+            keyCode == KeyEvent.KEYCODE_DPAD_UP ||
+            keyCode == KeyEvent.KEYCODE_DPAD_DOWN
         ) {
             if (!hangulInputProcessor.isEmpty()) {
                 updateComposingState(inputConnection, true)
             }
-            return super.onKeyUp(keyCode, event)
         }
         return super.onKeyUp(keyCode, event)
     }
@@ -331,102 +332,108 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
         hangulInputProcessor.close()  // 리소스 해제
     }
 
+    /**
+     * 설정이 변경되었을 때 호출되는 메서드입니다.
+     * @param sharedPreferences SharedPreferences? 변경된 설정입니다.
+     * @param key String? 변경된 키입니다.
+     */
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
-        // 설정이 변경되었을 때 해당 설정을 다시 로드
         loadPreferences()
     }
 
     /**
-     * 설정값 로드하는 메서드
+     * 설정값을 로드하는 메서드입니다.
      */
     private fun loadPreferences() {
         prefEnglishLayout = prefs.getString("pref_english_layout", PreferenceDefaults.pref_english_layout)
-            ?: PreferenceDefaults.pref_english_layout  // 기본 영문 자판 설정
+            ?: PreferenceDefaults.pref_english_layout
         prefHangulLayout = prefs.getString("pref_hangul_layout", PreferenceDefaults.pref_hangul_layout)
-            ?: PreferenceDefaults.pref_hangul_layout  // 기본 한글 자판 설정
+            ?: PreferenceDefaults.pref_hangul_layout
         prefHanjaSelectType = prefs.getString("pref_hanja_select_type", PreferenceDefaults.pref_hanja_select_type)
-            ?: PreferenceDefaults.pref_hanja_select_type// 한자 선택 방식
-        prefHangulAutoReorder = prefs.getBoolean("pref_hangul_auto_reorder", PreferenceDefaults.pref_hangul_auto_reorder)  // 자동 순서 교정 옵션 (모아치기)
-        prefHangulCombiOnDoubleStroke = prefs.getBoolean("pref_hangul_combi_on_double_stroke", PreferenceDefaults.pref_hangul_combi_on_double_stroke)  // 자음 연타 조합 옵션
-        prefHangulNonChoseongCombi = prefs.getBoolean("pref_hangul_non_choseong_combi", PreferenceDefaults.pref_hangul_non_choseong_combi)  // 겹자음 조합 옵션
-        prefInputModeStatusbarMessage = prefs.getBoolean("pref_input_mode_statusbar_message", PreferenceDefaults.pref_input_mode_statusbar_message)  // 한/영 상태
-        prefInputModeToastMessage = prefs.getBoolean("pref_input_mode_toast_message", PreferenceDefaults.pref_input_mode_toast_message)  // 한/영 상태
-        prefUseEscEnglishMode = prefs.getBoolean("pref_use_esc_english_mode", PreferenceDefaults.pref_use_esc_english_mode)  // ESC 눌렀을때 영문으로
-        prefUseLeftShiftSpace = prefs.getBoolean("pref_use_left_shift_space", PreferenceDefaults.pref_use_left_shift_space)  // Left Shift-Space 눌렀을때 한/영 전환
-        prefUseRightShiftSpace = prefs.getBoolean("pref_use_right_shift_space", PreferenceDefaults.pref_use_right_shift_space)  // Right Shift-Space 눌렀을때 한자입력
-        prefUseRightAlt = prefs.getBoolean("pref_use_right_alt", PreferenceDefaults.pref_use_right_alt)  // RALT 눌렀을때 한/영 전환
-        prefUseRightCtrl = prefs.getBoolean("pref_use_right_ctrl", PreferenceDefaults.pref_use_right_ctrl)  // RCtrl 눌렀을때 한자입력
-        prefUseCtrlNumberToFunction = prefs.getBoolean("pref_use_ctrl_number_to_function", PreferenceDefaults.pref_use_ctrl_number_to_function)  // Ctrl+Number(-=)를 F1-F12로
-        prefUseCtrlGraveToEsc = prefs.getBoolean("pref_use_ctrl_grave_to_esc", PreferenceDefaults.pref_use_ctrl_grave_to_esc)  // Ctrl+~를 ESC로
+            ?: PreferenceDefaults.pref_hanja_select_type
+        prefHangulAutoReorder = prefs.getBoolean("pref_hangul_auto_reorder", PreferenceDefaults.pref_hangul_auto_reorder)
+        prefHangulCombiOnDoubleStroke = prefs.getBoolean("pref_hangul_combi_on_double_stroke", PreferenceDefaults.pref_hangul_combi_on_double_stroke)
+        prefHangulNonChoseongCombi = prefs.getBoolean("pref_hangul_non_choseong_combi", PreferenceDefaults.pref_hangul_non_choseong_combi)
+        prefInputModeStatusbarMessage = prefs.getBoolean("pref_input_mode_statusbar_message", PreferenceDefaults.pref_input_mode_statusbar_message)
+        prefInputModeToastMessage = prefs.getBoolean("pref_input_mode_toast_message", PreferenceDefaults.pref_input_mode_toast_message)
+        prefUseEscEnglishMode = prefs.getBoolean("pref_use_esc_english_mode", PreferenceDefaults.pref_use_esc_english_mode)
+        prefUseLeftShiftSpace = prefs.getBoolean("pref_use_left_shift_space", PreferenceDefaults.pref_use_left_shift_space)
+        prefUseRightShiftSpace = prefs.getBoolean("pref_use_right_shift_space", PreferenceDefaults.pref_use_right_shift_space)
+        prefUseRightAlt = prefs.getBoolean("pref_use_right_alt", PreferenceDefaults.pref_use_right_alt)
+        prefUseRightCtrl = prefs.getBoolean("pref_use_right_ctrl", PreferenceDefaults.pref_use_right_ctrl)
+        prefUseCtrlNumberToFunction = prefs.getBoolean("pref_use_ctrl_number_to_function", PreferenceDefaults.pref_use_ctrl_number_to_function)
+        prefUseCtrlGraveToEsc = prefs.getBoolean("pref_use_ctrl_grave_to_esc", PreferenceDefaults.pref_use_ctrl_grave_to_esc)
 
-        // Set options in HangulInputProcessor
+        // HangulInputProcessor 설정 적용
         hangulInputProcessor.selectKeyboard(prefHangulLayout)
         hangulInputProcessor.setOption(0, prefHangulAutoReorder)
         hangulInputProcessor.setOption(1, prefHangulCombiOnDoubleStroke)
         hangulInputProcessor.setOption(2, prefHangulNonChoseongCombi)
 
-        // Set options in EnglishConverter
+        // EnglishConverter 설정 적용
         englishConverter.setLayout(prefEnglishLayout)
 
-        // 한자입력
-        dismissCandidates()
-        prefHanjaUseOverlay = if (prefHanjaSelectType == "o") {
-            Settings.canDrawOverlays(this)
-        } else {
-            false
-        }
+        // 한자 입력 설정
+        dismissCandidates(true)
+        prefHanjaUseOverlay = (prefHanjaSelectType == "v" || prefHanjaSelectType == "h") && Settings.canDrawOverlays(this)
+        prefHanjaSelectType = if (!prefHanjaUseOverlay) "c" else prefHanjaSelectType
 
-        // Statusbar 초기화
+        // StatusBar 초기화
         if (!prefInputModeStatusbarMessage) {
             hideStatusIcon()
         }
 
         // 알림 권한 체크
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+        if (prefInputModeToastMessage) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) {
                 prefInputModeToastMessage = false
             }
         }
     }
 
     /**
-     * 현재 모드가 한국어인지 확인하는 메서드
-     * @return Boolean 현재 한국어 모드 여부
+     * 현재 모드가 한국어인지 확인하는 메서드입니다.
+     * @return Boolean 현재 한국어 모드 여부를 반환합니다.
      */
     private fun isKoreanMode(): Boolean {
-        // Subtype 쓸 경우
-        //val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        //val currentSubtype: InputMethodSubtype? = imm.currentInputMethodSubtype
-        //val extraValue = currentSubtype?.languageTag ?: "en"
-        //return extraValue == "ko"
-
-        //Subtype 안 쓸 경우
-        return isKoreanMode
+        return currentImputMode == InputMode.KOREAN
     }
 
     /**
-     * 한글/영문 모드를 전환하는 메서드
+     * 한글/영문 모드를 전환하는 메서드입니다.
      */
-    private fun switchLanguageMode() {
-        //Subtype 쓸 경우
-        //dismissCandidates()
-        //val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        //val currentInputMethodId = Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
-
-        //val currentSubtype = imm.currentInputMethodSubtype
-        //val subtypes = imm.getEnabledInputMethodSubtypeList(null, true) // true 대신 false 사용
-        //val nextSubtype = subtypes.firstOrNull { it != currentSubtype }
-        //switchInputMethod(currentInputMethodId , nextSubtype)
-
-        //Subtype 안 쓸 경우
+    private fun switchLanguageModeToggle() {
         dismissCandidates()
-        isKoreanMode = !isKoreanMode()
+        currentImputMode = if (currentImputMode == InputMode.ENGLISH) InputMode.KOREAN else InputMode.ENGLISH
+        showLanguageMode()
+        Log.d("HangulInputMethodService", "Language mode switched to ${if (currentImputMode == InputMode.KOREAN) "Korean" else "English"}")
+    }
+
+    /**
+     * 한글/영문 모드를 전환하는 메서드입니다.
+     */
+    private fun switchLanguageModeSubtype() {
+        dismissCandidates()
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        val currentInputMethodId = Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
+        val currentSubtype = imm.currentInputMethodSubtype
+        val subtypes = imm.getEnabledInputMethodSubtypeList(null, true) // true 대신 false 사용
+        val nextSubtype = subtypes.firstOrNull { it != currentSubtype }
+        switchInputMethod(currentInputMethodId , nextSubtype)
+        Log.d("HangulInputMethodService", "Language mode switched to ${if (currentImputMode == InputMode.KOREAN) "Korean" else "English"}")
+    }
+
+    override fun onCurrentInputMethodSubtypeChanged(newSubtype: InputMethodSubtype?) {
+        super.onCurrentInputMethodSubtypeChanged(newSubtype)
+        currentImputMode = if (newSubtype?.languageTag == "ko-KR") InputMode.KOREAN else InputMode.ENGLISH
         showLanguageMode()
     }
 
     /**
-     * 한글/영문 모드를 상태바에 표시하거나 Toast로 알리는 메서드
-     * @param toastMessage Boolean Toast 메시지 표시 여부
+     * 한글/영문 모드를 상태바에 표시하거나 Toast로 알리는 메서드입니다.
+     * @param toastMessage Boolean Toast 메시지 표시 여부입니다.
      */
     private fun showLanguageMode(toastMessage: Boolean = true) {
         if (prefInputModeStatusbarMessage) {
@@ -437,16 +444,16 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
             val message = if (isKoreanMode()) R.string.korean else R.string.english
             Handler(Looper.getMainLooper()).post {
                 toast?.cancel()
-                toast = Toast.makeText(this@HangulInputMethodService.applicationContext, message, Toast.LENGTH_SHORT)
+                toast = Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT)
                 toast?.show()
             }
         }
     }
 
     /**
-     * 입력 중인 한글 상태를 업데이트하는 메서드
-     * @param inputConnection InputConnection 입력 연결 객체
-     * @param forceCommit Boolean 강제 커밋 여부
+     * 입력 중인 한글 상태를 업데이트하는 메서드입니다.
+     * @param inputConnection InputConnection 입력 연결 객체입니다.
+     * @param forceCommit Boolean 강제 커밋 여부입니다.
      */
     private fun updateComposingState(inputConnection: InputConnection, forceCommit: Boolean) {
         if (forceCommit) {
@@ -472,7 +479,7 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
                 inputConnection.commitText(commitText, 1)
             }
 
-            // Preedit string을 확인하고 조합 중인 글자가 있으면 화면에 표시
+            // 조합 중인 글자가 있으면 화면에 표시
             val preeditText = hangulInputProcessor.getPreeditString()
             if (!preeditText.isNullOrEmpty()) {
                 inputConnection.setComposingText(preeditText, 1)
@@ -481,72 +488,71 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
     }
 
     /**
-     * 한자 입력을 처리하는 메서드
-     * @param inputConnection InputConnection 입력 연결 객체
+     * 한자 입력을 처리하는 메서드입니다.
+     * @param inputConnection InputConnection 입력 연결 객체입니다.
      */
     private fun handleHanjaInput(inputConnection: InputConnection) {
+        var hanjaText = ""
         var removeCursor = false
-        var hanjaMap: LinkedHashMap<String, String>? = null
 
-        // 입력 중인 글자
+        // 입력 중인 글자 확인
         val preeditText = hangulInputProcessor.getPreeditString()
         if (!preeditText.isNullOrEmpty()) {
-            hanjaMap = hangulInputProcessor.matchExactHanjaMap(preeditText.toString())
+            hanjaText = preeditText
             removeCursor = true
         } else {
-            // 선택한 텍스트
+            // 선택한 텍스트 확인
             val selectedText = inputConnection.getSelectedText(0)
             if (!selectedText.isNullOrEmpty()) {
-                hanjaMap = hangulInputProcessor.matchExactHanjaMap(selectedText.toString())
+                hanjaText = selectedText.toString()
                 removeCursor = false
             } else {
-                //현재 커서
+                // 커서 앞의 문자 확인
                 val cursorText = inputConnection.getTextBeforeCursor(1, 0)
                 if (!cursorText.isNullOrEmpty()) {
-                    hanjaMap = hangulInputProcessor.matchExactHanjaMap(cursorText.toString())
+                    hanjaText = cursorText.toString()
                     removeCursor = true
                 }
             }
         }
 
-        if (!hanjaMap.isNullOrEmpty()) {
-            showCandidates(hanjaMap, removeCursor)
-            return
-        }
-    }
-
-    /**
-     * 후보자 뷰를 표시하는 메서드 (한자 변환 처리)
-     * @param hanjaMap HashMap<String, String>? 한자 후보 목록
-     * @param removeCursor Boolean 커서를 제거할지 여부
-     */
-    private fun showCandidates(hanjaMap: HashMap<String, String>?, removeCursor: Boolean) {
-        if (prefHanjaUseOverlay) {
-            populateHanjaOverlay(hanjaMap, removeCursor)
-        } else {
+        if (hanjaText.isNotEmpty()) {
+            val hanjaMap = hangulInputProcessor.matchExactHanjaMap(hanjaText)
             if (!hanjaMap.isNullOrEmpty()) {
-                setCandidatesViewShown(true)
-                populateCandidates(hanjaMap, removeCursor)
-            } else {
-                setCandidatesViewShown(false)
+                showCandidates(hanjaText, hanjaMap, removeCursor)
             }
         }
     }
 
     /**
-     * 오버레이 뷰에 한자 후보 목록을 추가하는 메서드
-     * @param hanjaMap HashMap<String, String>? 한자 후보 목록
-     * @param removeCursor Boolean 커서를 제거할지 여부
+     * 후보자 뷰를 표시하는 메서드입니다. (한자 변환 처리)
+     * @param hanjaText String 원본 문자입니다.
+     * @param hanjaMap HashMap<String, String> 한자 후보 목록입니다.
+     * @param removeCursor Boolean 커서를 제거할지 여부입니다.
      */
-    private fun populateHanjaOverlay(hanjaMap: HashMap<String, String>?, removeCursor: Boolean) {
-        if (hanjaOverlay != null) {
-            hanjaOverlay?.dismissOverlay()
+    private fun showCandidates(hanjaText: String, hanjaMap: HashMap<String, String>, removeCursor: Boolean) {
+        if (prefHanjaUseOverlay) {
+            populateHanjaOverlay(hanjaText, hanjaMap, removeCursor)
+        } else {
+            setCandidatesViewShown(false)
+            setCandidatesViewShown(true)
+            populateCandidates(hanjaText, hanjaMap, removeCursor)
         }
+    }
+
+    /**
+     * 오버레이 뷰에 한자 후보 목록을 추가하는 메서드입니다.
+     * @param hanjaText String 원본 문자입니다.
+     * @param hanjaMap HashMap<String, String> 한자 후보 목록입니다.
+     * @param removeCursor Boolean 커서를 제거할지 여부입니다.
+     */
+    private fun populateHanjaOverlay(hanjaText: String, hanjaMap: HashMap<String, String>, removeCursor: Boolean) {
+        hanjaOverlay?.dismissOverlay()
         hanjaOverlay = HanjaOverlay(this)
-        hanjaOverlay?.showHanjaOverlay(hanjaMap!!)
+        hanjaOverlay?.showHanjaOverlay(hanjaText, hanjaMap, prefHanjaSelectType)
 
         hanjaOverlay?.onCandidateSelectedListener = { selectedHanja ->
-            Log.d("MainActivity", "Selected Hanja: $selectedHanja")
+            Log.d("HangulInputMethodService", "Selected Hanja: $selectedHanja")
 
             val inputConnection = currentInputConnection
             inputConnection.finishComposingText()
@@ -561,14 +567,14 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
     }
 
     /**
-     * 후보자 뷰에 한자 후보 목록을 추가하는 메서드
-     * @param hanjaMap HashMap<String, String>? 한자 후보 목록
-     * @param removeCursor Boolean 커서를 제거할지 여부
+     * 후보자 뷰에 한자 후보 목록을 추가하는 메서드입니다.
+     * @param hanjaText String 원본 문자입니다.
+     * @param hanjaMap HashMap<String, String> 한자 후보 목록입니다.
+     * @param removeCursor Boolean 커서를 제거할지 여부입니다.
      */
-    private fun populateCandidates(hanjaMap: HashMap<String, String>?, removeCursor: Boolean) {
-        candidateScrollView?.onCandidateSelectedListener = { selectedKey ->
-            Log.d("MainActivity", "Selected candidate key: $selectedKey")
-            // 원하는 동작 수행
+    private fun populateCandidates(hanjaText: String, hanjaMap: HashMap<String, String>, removeCursor: Boolean) {
+        candidateScrollView.onCandidateSelectedListener = { selectedKey ->
+            Log.d("HangulInputMethodService", "Selected candidate key: $selectedKey")
             setCandidatesViewShown(false)
 
             val inputConnection = currentInputConnection
@@ -581,17 +587,17 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
             }
             inputConnection.commitText(selectedKey, 1)
         }
-        candidateScrollView?.addCards(hanjaMap)
-        Log.d("HangulInputMethodService", "populateCandidates completed with ${hanjaMap?.size} items")
+        candidateScrollView.addCards(hanjaText, hanjaMap)
+        Log.d("HangulInputMethodService", "populateCandidates completed with ${hanjaMap.size} items")
     }
 
     /**
-     * 후보자 뷰를 없애는 메서드
+     * 후보자 뷰를 없애는 메서드입니다.
+     * @param dismissAll Boolean 모든 후보자를 제거할지 여부입니다.
      */
-    private fun dismissCandidates() {
-        if (prefHanjaUseOverlay) {
-            hanjaOverlay?.dismissOverlay()
-        } else {
+    private fun dismissCandidates(dismissAll: Boolean = false) {
+        hanjaOverlay?.dismissOverlay()
+        if (dismissAll || !prefHanjaUseOverlay) {
             setCandidatesViewShown(false)
         }
     }

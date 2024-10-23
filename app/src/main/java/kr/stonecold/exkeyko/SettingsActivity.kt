@@ -11,10 +11,7 @@ import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -34,22 +31,35 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.ActivityCompat
-import androidx.core.app.ActivityCompat.startActivityForResult
-import androidx.core.content.ContextCompat
 import kr.stonecold.exkeyko.ui.theme.ExKeyKOTheme
 
 class SettingsActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Android 13 이상에서만 알림 권한 요청
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requestNotificationPermissionIfNeeded()
-        }
+        val prefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+        val isFirstLaunch = prefs.getBoolean("first_launch", true)
 
-        //Overlay 권한 요청
-        checkAndRequestOverlayPermission()
+        if(isFirstLaunch) {
+            with(prefs.edit()) {
+                putBoolean("first_launch", false)
+                apply()
+            }
+
+            if (!Settings.canDrawOverlays(this)
+                || checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) {
+                Toast.makeText(this, getString(R.string.msg_permissions), Toast.LENGTH_SHORT).show()
+
+                if (!Settings.canDrawOverlays(this)) {
+                    requestOverlayPermission()
+                }
+                if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    requestNotificationPermission()
+                }
+            }
+        }
 
         // 설정 화면을 구성하는 Composable 함수 호출
         setContent {
@@ -67,48 +77,36 @@ class SettingsActivity : ComponentActivity() {
     /**
      * Android 13 이상에서 알림 권한을 요청합니다.
      */
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    private fun requestNotificationPermissionIfNeeded() {
-        if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
-            return
-        }
-        when {
-            shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS) -> {
-                Toast.makeText(this, getString(R.string.msg_post_notifications_toast), Toast.LENGTH_SHORT).show()
-            }
-            else -> {
-                // 권한 요청
-                registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
-                    if (isGranted) {
-                        Toast.makeText(this, getString(R.string.msg_post_notifications_grant), Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(this, getString(R.string.msg_post_notifications_deny), Toast.LENGTH_SHORT).show()
-                    }
-                }.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+    fun requestNotificationPermission() {
+        if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                @Suppress("LocalVariableName") val REQUEST_NOTIFICATION_PERMISSION = 1001
+                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), REQUEST_NOTIFICATION_PERMISSION)
             }
         }
     }
 
-    fun checkAndRequestOverlayPermission(): Boolean {
-        if (Settings.canDrawOverlays(this)) {
-            return true
+    /**
+     * Overlay 권한을 확인하고 필요 시 요청합니다.
+     */
+    fun requestOverlayPermission() {
+        if (!Settings.canDrawOverlays(this)) {
+            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+            }
+            startActivity(intent)
         }
-        // 권한이 없을 경우 권한 요청
-        val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
-        val REQUEST_OVERLAY_PERMISSION = 1001  // 권한 요청 코드
-        return startActivityIfNeeded(intent, REQUEST_OVERLAY_PERMISSION)
     }
 }
 
 @Composable
-fun SettingsScreen(context: Context) {
+fun SettingsScreen(context: SettingsActivity) {
     val prefs = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
 
     // 상태 변수로 설정 값을 관리
     var selectedEnglishKeyboard by remember { mutableStateOf(prefs.getString("pref_english_layout", PreferenceDefaults.pref_english_layout) ?: PreferenceDefaults.pref_english_layout) }
     var selectedKoreanKeyboard by remember { mutableStateOf(prefs.getString("pref_hangul_layout", PreferenceDefaults.pref_hangul_layout) ?: PreferenceDefaults.pref_hangul_layout) }
     var selectedHanjaSelectType by remember { mutableStateOf(prefs.getString("pref_hanja_select_type", PreferenceDefaults.pref_hanja_select_type) ?: PreferenceDefaults.pref_hanja_select_type) }
-    selectedHanjaSelectType = if (Settings.canDrawOverlays(context)) selectedHanjaSelectType else "c"
     var isAutoReorderEnabled by remember { mutableStateOf(prefs.getBoolean("pref_hangul_auto_reorder", PreferenceDefaults.pref_hangul_auto_reorder)) }
     var isCombiOnDoubleStrokeEnabled by remember { mutableStateOf(prefs.getBoolean("pref_hangul_combi_on_double_stroke", PreferenceDefaults.pref_hangul_combi_on_double_stroke)) }
     var isNonChoseongCombiEnabled by remember { mutableStateOf(prefs.getBoolean("pref_hangul_non_choseong_combi", PreferenceDefaults.pref_hangul_non_choseong_combi)) }
@@ -122,6 +120,24 @@ fun SettingsScreen(context: Context) {
     var prefUseCtrlGraveToEsc by remember { mutableStateOf(prefs.getBoolean("pref_use_ctrl_grave_to_esc", PreferenceDefaults.pref_use_ctrl_grave_to_esc)) }
     var prefUseCtrlNumberToFuntion by remember { mutableStateOf(prefs.getBoolean("pref_use_ctrl_number_to_function", PreferenceDefaults.pref_use_ctrl_number_to_function)) }
     var textInput by remember { mutableStateOf(TextFieldValue("")) }
+
+    // Overlay 권한이 없으면 한자 변경을 후보키로 합니다.
+    if (!Settings.canDrawOverlays(context)) {
+        selectedHanjaSelectType = "c"
+        with(prefs.edit()) {
+            putString("pref_hanja_select_type", "c")
+            apply()
+        }
+    }
+
+    // 알림 권한이 없으면 Toast 메시지를 false로 설정합니다.
+    if (context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+        prefInputModeToastMessage = false
+        with(prefs.edit()) {
+            putBoolean("pref_input_mode_toast_message", false)
+            apply()
+        }
+    }
 
     val optionEnglishKeyboard = listOf(
         stringResource(R.string.english_qwerty) to "q",
@@ -140,8 +156,9 @@ fun SettingsScreen(context: Context) {
         stringResource(R.string.hangul_ro) to "ro",
     )
     val optionHanjaOverlay = listOf(
+        stringResource(R.string.hanja_overlay_horizontal) to "h",
+        stringResource(R.string.hanja_overlay_vertical) to "v",
         stringResource(R.string.hanja_candidates) to "c",
-        stringResource(R.string.hanja_overlay) to "o",
     )
 
     // 설정 화면 레이아웃
@@ -209,6 +226,17 @@ fun SettingsScreen(context: Context) {
                     ) {
                         Text(text = stringResource(R.string.change_input_method_title), color = Color.White)
                     }
+                    if (PreferenceDefaults.system_use_subtype) {
+                        Button(
+                            onClick = { openInputMethodSubtypeSettings(context) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(start = 8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
+                        ) {
+                            Text(text = stringResource(R.string.subtype_select_ttitle), color = Color.White)
+                        }
+                    }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -243,8 +271,11 @@ fun SettingsScreen(context: Context) {
                     options = optionHanjaOverlay,
                     selectedOption = selectedHanjaSelectType,
                     onOptionSelected = { newValue ->
-                        if (newValue == "o" && (!(context as SettingsActivity).checkAndRequestOverlayPermission())) {
+                        if (newValue != "c" && !Settings.canDrawOverlays(context)) {
                             selectedHanjaSelectType = "c"
+                            savePreference(prefs, "pref_hanja_select_type", "c")
+                            Toast.makeText(context, context.getString(R.string.msg_permission_overlay), Toast.LENGTH_SHORT).show()
+                            context.requestOverlayPermission()
                         } else {
                             selectedHanjaSelectType = newValue
                             savePreference(prefs, "pref_hanja_select_type", newValue)
@@ -296,29 +327,23 @@ fun SettingsScreen(context: Context) {
                         savePreference(prefs, "pref_input_mode_statusbar_message", newValue)
                     }
                 )
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    OptionItemWithPermission(
-                        title = stringResource(R.string.input_mode_toast_message_title),
-                        description = stringResource(R.string.input_mode_toast_message_desc),
-                        checkedState = prefInputModeToastMessage,
-                        onCheckedChange = { newValue ->
-                            prefInputModeToastMessage = newValue
-                            savePreference(prefs, "pref_input_mode_toast_message", newValue)
-                        },
-                        prefs = prefs
-                    )
-                } else {
-                    OptionItem(
-                        title = stringResource(R.string.input_mode_toast_message_title),
-                        description = stringResource(R.string.input_mode_toast_message_desc),
-                        checkedState = prefInputModeToastMessage,
-                        isEnabled = true,
-                        onCheckedChange = { newValue ->
+                OptionItem(
+                    title = stringResource(R.string.input_mode_toast_message_title),
+                    description = stringResource(R.string.input_mode_toast_message_desc),
+                    checkedState = prefInputModeToastMessage,
+                    isEnabled = true,
+                    onCheckedChange = { newValue ->
+                        if (context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                            prefInputModeToastMessage = false
+                            savePreference(prefs, "pref_input_mode_toast_message", false)
+                            Toast.makeText(context, context.getString(R.string.msg_permission_notification), Toast.LENGTH_SHORT).show()
+                            context.requestNotificationPermission()
+                        } else {
                             prefInputModeToastMessage = newValue
                             savePreference(prefs, "pref_input_mode_toast_message", newValue)
                         }
-                    )
-                }
+                    }
+                )
                 OptionItem(
                     title = stringResource(R.string.use_esc_english_mode),
                     description = stringResource(R.string.use_esc_english_desc),
@@ -336,7 +361,7 @@ fun SettingsScreen(context: Context) {
                     isEnabled = true,
                     onCheckedChange = { newValue ->
                         prefUseLeftShiftSpace = newValue
-                        savePreference(prefs, "pref_use_shift_space", newValue)
+                        savePreference(prefs, "pref_use_left_shift_space", newValue)
                     }
                 )
                 OptionItem(
@@ -346,7 +371,7 @@ fun SettingsScreen(context: Context) {
                     isEnabled = true,
                     onCheckedChange = { newValue ->
                         prefUseRightShiftSpace = newValue
-                        savePreference(prefs, "pref_use_shift_space", newValue)
+                        savePreference(prefs, "pref_use_right_shift_space", newValue)
                     }
                 )
                 OptionItem(
@@ -590,62 +615,6 @@ fun OptionItem(title: String, description: String, checkedState: Boolean, isEnab
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.TIRAMISU)
-@Composable
-fun OptionItemWithPermission(
-    title: String,
-    description: String,
-    checkedState: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    prefs: SharedPreferences
-) {
-    // Activity로부터 권한 요청을 처리하는 등록
-    val activity = LocalContext.current as ComponentActivity
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted ->
-            if (isGranted) {
-                onCheckedChange(true)  // 권한이 부여되면 체크박스를 true로 설정
-                savePreference(prefs, "pref_input_mode_toast_message", true)
-            } else {
-                onCheckedChange(false)  // 권한이 없으면 false로 유지
-                savePreference(prefs, "pref_input_mode_toast_message", false)
-            }
-        }
-    )
-
-    // 권한이 있는지 확인하는 함수
-    fun hasNotificationPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(
-            activity, android.Manifest.permission.POST_NOTIFICATIONS
-        ) == PackageManager.PERMISSION_GRANTED
-    }
-
-    // OptionItem 호출
-    OptionItem(
-        title = title,
-        description = description,
-        checkedState = if (hasNotificationPermission()) checkedState else false,  // 권한이 없으면 false
-        isEnabled = true,
-        onCheckedChange = { newValue ->
-            if (newValue) {
-                if (hasNotificationPermission()) {
-                    // 권한이 있으면 true로 설정
-                    onCheckedChange(true)
-                    savePreference(prefs, "pref_input_mode_toast_message", true)
-                } else {
-                    // 권한이 없으면 권한 요청
-                    permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                }
-            } else {
-                // 사용자가 체크박스를 false로 변경한 경우
-                onCheckedChange(false)
-                savePreference(prefs, "pref_input_mode_toast_message", false)
-            }
-        }
-    )
-}
-
 @Composable
 fun NoticeSection() {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
@@ -669,13 +638,6 @@ fun NoticeSection() {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = stringResource(id = R.string.notice_libhangul_use),
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 8.dp)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
             text = stringResource(id = R.string.notice_additional_info),
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
@@ -685,8 +647,8 @@ fun NoticeSection() {
 }
 
 /**
- * 키보드 설정 화면으로 이동
- * @param context Context 애플리케이션 컨텍스트
+ * 키보드 설정 화면으로 이동합니다.
+ * @param context Context 애플리케이션 컨텍스트입니다.
  */
 fun openKeyboardSettings(context: Context) {
     val intent = Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)
@@ -694,8 +656,8 @@ fun openKeyboardSettings(context: Context) {
 }
 
 /**
- * 기본 입력기 선택 화면으로 이동
- * @param context Context 애플리케이션 컨텍스트
+ * 기본 입력기 선택 화면으로 이동합니다.
+ * @param context Context 애플리케이션 컨텍스트입니다.
  */
 fun openDefaultInputMethod(context: Context) {
     val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -703,10 +665,24 @@ fun openDefaultInputMethod(context: Context) {
 }
 
 /**
- * 설정값을 SharedPreferences에 저장
- * @param prefs SharedPreferences 설정 객체
- * @param key String 설정의 키
- * @param value Any 저장할 값 (String 또는 Boolean)
+ * Sutype 선택 화면으로 이동합니다.
+ * @param context Context 애플리케이션 컨텍스트입니다.
+ */
+fun openInputMethodSubtypeSettings(context: Context) {
+    val imeId = "${context.packageName}/.${HangulInputMethodService::class.java.simpleName}"
+    val intent = Intent(Settings.ACTION_INPUT_METHOD_SUBTYPE_SETTINGS).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+        putExtra(Settings.EXTRA_INPUT_METHOD_ID, imeId)
+        putExtra("android.intent.extra.TITLE", context.getString(R.string.subtype_settings_title));
+    }
+    context.startActivity(intent)
+}
+
+/**
+ * 설정값을 SharedPreferences에 저장합니다.
+ * @param prefs SharedPreferences 설정 객체입니다.
+ * @param key String 설정의 키입니다.
+ * @param value Any 저장할 값 (String 또는 Boolean)입니다.
  */
 fun savePreference(prefs: SharedPreferences, key: String, value: Any) {
     with(prefs.edit()) {
@@ -722,6 +698,11 @@ fun savePreference(prefs: SharedPreferences, key: String, value: Any) {
 @Composable
 fun DefaultPreview() {
     ExKeyKOTheme {
-        SettingsScreen(context = null as? Context ?: LocalContext.current)
+        val context = LocalContext.current
+        if (context is SettingsActivity) {
+            SettingsScreen(context)
+        } else {
+            Text("Preview Mode: No ComponentActivity")
+        }
     }
 }
