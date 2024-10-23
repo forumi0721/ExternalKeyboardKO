@@ -33,8 +33,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kr.stonecold.exkeyko.ui.theme.ExKeyKOTheme
 
+/**
+ * 설정 화면 Activity 클래스
+ */
 class SettingsActivity : ComponentActivity() {
 
+    /**
+     * onCreate
+     * 초기 권한 설정을 위해 override
+     * @param savedInstanceState 기본 파라미터
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -75,7 +83,7 @@ class SettingsActivity : ComponentActivity() {
     }
 
     /**
-     * Android 13 이상에서 알림 권한을 요청합니다.
+     * 알림 권한 요청 메서드 (Android 13 이상)
      */
     fun requestNotificationPermission() {
         if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -87,7 +95,7 @@ class SettingsActivity : ComponentActivity() {
     }
 
     /**
-     * Overlay 권한을 확인하고 필요 시 요청합니다.
+     * Overlay 권한 요청 메서드
      */
     fun requestOverlayPermission() {
         if (!Settings.canDrawOverlays(this)) {
@@ -99,6 +107,9 @@ class SettingsActivity : ComponentActivity() {
     }
 }
 
+/**
+ * 설정 화면
+ */
 @Composable
 fun SettingsScreen(context: SettingsActivity) {
     val prefs = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
@@ -450,6 +461,9 @@ fun SettingsScreen(context: SettingsActivity) {
     }
 }
 
+/**
+ * 카테고리 표시를 위한 컨트롤
+ */
 @Composable
 fun CategorySection(title: String) {
     Text(
@@ -465,6 +479,50 @@ fun CategorySection(title: String) {
     )
 }
 
+/**
+ * 옵션 아이톰 표시를 위한 컨트롤
+ */
+@Composable
+fun OptionItem(
+    title: String,
+    description: String,
+    checkedState: Boolean,
+    isEnabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(
+                text = title,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = description,
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Switch(
+            checked = checkedState,
+            onCheckedChange = onCheckedChange,
+            enabled = isEnabled
+        )
+    }
+}
+
+/**
+ * 옵션 아이톰 표시를 위한 컨트롤 (키보드 설정용)
+ */
 @Composable
 fun OptionItemKeyboard(
     title: String,
@@ -524,6 +582,9 @@ fun OptionItemKeyboard(
     }
 }
 
+/**
+ * 옵션 아이톰 표시를 위한 컨트롤 (한자 표시 설정용)
+ */
 @Composable
 fun OptionItemHanjaOverlay(
     title: String,
@@ -583,38 +644,9 @@ fun OptionItemHanjaOverlay(
     }
 }
 
-@Composable
-fun OptionItem(title: String, description: String, checkedState: Boolean, isEnabled: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = title,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = description,
-                fontSize = 14.sp,
-                color = Color.Gray
-            )
-        }
-        Spacer(modifier = Modifier.width(8.dp))
-        Switch(
-            checked = checkedState,
-            onCheckedChange = onCheckedChange,
-            enabled = isEnabled
-        )
-    }
-}
-
+/**
+ * Notice 영역 컨트롤
+ */
 @Composable
 fun NoticeSection() {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
@@ -647,8 +679,8 @@ fun NoticeSection() {
 }
 
 /**
- * 키보드 설정 화면으로 이동합니다.
- * @param context Context 애플리케이션 컨텍스트입니다.
+ * 키보드 설정 화면으로 이동하는 메서드
+ * @param context Context
  */
 fun openKeyboardSettings(context: Context) {
     val intent = Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)
@@ -656,8 +688,8 @@ fun openKeyboardSettings(context: Context) {
 }
 
 /**
- * 기본 입력기 선택 화면으로 이동합니다.
- * @param context Context 애플리케이션 컨텍스트입니다.
+ * 기본 입력기 선택 화면으로 이동하는 메서드
+ * @param context Context
  */
 fun openDefaultInputMethod(context: Context) {
     val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -665,8 +697,8 @@ fun openDefaultInputMethod(context: Context) {
 }
 
 /**
- * Sutype 선택 화면으로 이동합니다.
- * @param context Context 애플리케이션 컨텍스트입니다.
+ * Sutype 선택 화면으로 이동하는 메서드
+ * @param context Context
  */
 fun openInputMethodSubtypeSettings(context: Context) {
     val imeId = "${context.packageName}/.${HangulInputMethodService::class.java.simpleName}"
@@ -679,10 +711,10 @@ fun openInputMethodSubtypeSettings(context: Context) {
 }
 
 /**
- * 설정값을 SharedPreferences에 저장합니다.
- * @param prefs SharedPreferences 설정 객체입니다.
- * @param key String 설정의 키입니다.
- * @param value Any 저장할 값 (String 또는 Boolean)입니다.
+ * 설정값을 SharedPreferences에 저장하는 메서드
+ * @param prefs SharedPreferences 객체
+ * @param key 설정 키
+ * @param value 설정 값
  */
 fun savePreference(prefs: SharedPreferences, key: String, value: Any) {
     with(prefs.edit()) {

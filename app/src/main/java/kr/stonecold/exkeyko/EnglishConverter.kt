@@ -3,15 +3,18 @@ package kr.stonecold.exkeyko
 import android.util.Log
 
 /**
- * QWERTY에서 Colemak 및 Dvorak으로 키 매핑을 담당하는 클래스입니다.
- * 레이아웃을 동적으로 선택할 수 있습니다.
+ * 영문 자판 변환을 위한 Key Mapping 클래스
  */
 class EnglishConverter {
 
-    // 현재 사용 중인 키보드 레이아웃 타입 ("q", "c", "d")
+    /**
+     * 현재 사용 중인 키보드 레이아웃 타입 (q, c, d)
+     */
     private var layoutType = "q" // 기본값은 QWERTY 레이아웃
 
-    // QWERTY에서 Colemak으로의 소문자 키 매핑
+    /**
+     * QWERTY에서 Colemak으로의 소문자 키 매핑
+     */
     private val qwertyToColemakLowerCaseMap = mapOf(
         // Row 1
         'q' to 'q', 'w' to 'w', 'e' to 'f', 'r' to 'p', 't' to 'g',
@@ -24,7 +27,9 @@ class EnglishConverter {
         'n' to 'k', 'm' to 'm'
     )
 
-    // QWERTY에서 Colemak으로의 대문자 키 매핑
+    /**
+     * QWERTY에서 Colemak으로의 대문자 키 매핑
+     */
     private val qwertyToColemakUpperCaseMap = mapOf(
         // Row 1
         'Q' to 'Q', 'W' to 'W', 'E' to 'F', 'R' to 'P', 'T' to 'G',
@@ -37,7 +42,9 @@ class EnglishConverter {
         'N' to 'K', 'M' to 'M'
     )
 
-    // QWERTY에서 Dvorak으로의 소문자 키 매핑
+    /**
+     * QWERTY에서 Dvorak으로의 소문자 키 매핑
+     */
     private val qwertyToDvorakLowerCaseMap = mapOf(
         // Row 1
         'q' to '\'', 'w' to ',', 'e' to '.', 'r' to 'p', 't' to 'y',
@@ -50,7 +57,9 @@ class EnglishConverter {
         'n' to 'b', 'm' to 'm', ',' to 'w', '.' to 'v', '/' to 'z'
     )
 
-    // QWERTY에서 Dvorak으로의 대문자 키 매핑
+    /**
+     * QWERTY에서 Dvorak으로의 대문자 키 매핑
+     */
     private val qwertyToDvorakUpperCaseMap = mapOf(
         // Row 1
         'Q' to '"', 'W' to '<', 'E' to '>', 'R' to 'P', 'T' to 'Y',
@@ -64,9 +73,8 @@ class EnglishConverter {
     )
 
     /**
-     * 현재 레이아웃 타입을 설정합니다.
-     * "c"는 Colemak, "d"는 Dvorak, 그 외는 QWERTY를 나타냅니다.
-     * @param layout String 설정할 레이아웃 타입입니다.
+     * 변환 레이아웃 설정 메서드
+     * @param layout 레이아웃 유형 (q: QWERTY, c: Colemak, d: Dvorak)
      */
     fun setLayout(layout: String) {
         layoutType = layout
@@ -74,10 +82,9 @@ class EnglishConverter {
     }
 
     /**
-     * 입력된 문자를 현재 설정된 레이아웃에 따라 변환합니다.
-     * 대소문자를 구분하여 변환하며, 매핑이 없는 경우 원래 문자를 반환합니다.
-     * @param inputChar Char 변환할 문자입니다.
-     * @return Char 변환된 문자 또는 원래 문자입니다.
+     * 설정한 레이아웃에 따라 문자를 변환하는 클래스
+     * @param inputChar 입력 문자
+     * @return 출력 문자
      */
     fun convert(inputChar: Char): Char {
         val convertedChar = when (layoutType) {

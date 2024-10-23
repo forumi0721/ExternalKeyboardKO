@@ -21,8 +21,8 @@ import android.view.inputmethod.InputMethodSubtype
 import android.widget.Toast
 
 /**
- * 한글 입력 메서드 서비스 클래스입니다.
- * 키 입력 처리 및 한/영 전환, 한자 변환 등을 담당합니다.
+ * 한글 입력 메서드 서비스 클래스
+ * 키 입력 처리 및 한/영 전환, 한자 변환 등을 담당하는 서비스
  */
 class HangulInputMethodService : InputMethodService(), SharedPreferences.OnSharedPreferenceChangeListener {
 
@@ -68,6 +68,9 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
     }
     private var hanjaOverlay: HanjaOverlay? = null
 
+    /**
+     * onCreate
+     */
     override fun onCreate() {
         super.onCreate()
 
@@ -84,9 +87,10 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
     }
 
     /**
-     * 입력 시작시 Statusbar 표시를 위해 onStartInputㄹ들 override 합니다.
-     * @param attribute EditorInfo? 기본 파라디터입니다.
-     * @param restarting Boolean 기본 파라디터입니다.
+     * onStartInput
+     * 입력 시작시 Statusbar 표시하기 우해 override
+     * @param attribute 기본 파라디터
+     * @param restarting 기본 파라디터
      */
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
          super.onStartInput(attribute, restarting)
@@ -94,8 +98,9 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
     }
 
     /**
-     * 키보드를 보이지 않기 위해 onCreateInputView를 override 합니다.
-     * @return View Dummy view 입니다.
+     * onCreateInputView
+     * S/W 키보드를 보이지 않기 위해 override
+     * @return Dummy view
      */
     override fun onCreateInputView(): View {
         val dummyView = View(this)
@@ -104,16 +109,9 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
     }
 
     /**
-     * 키보드를 보이지 않기 위해 onEvaluateFullscreenMode를 override 합니다.
-     * @return Boolean 숨기기 처리합니다.
-     */
-    override fun onEvaluateFullscreenMode(): Boolean {
-        return false
-    }
-
-    /**
-     * 키보드를 보이지 않기 위해 onEvaluateInputViewShown를 override 합니다.
-     * @return Boolean 숨기기 처리합니다.
+     * onEvaluateInputViewShown
+     * 키보드를 보이지 않기 위해 override
+     * @return false
      */
     override fun onEvaluateInputViewShown(): Boolean {
         super.onEvaluateInputViewShown()
@@ -121,18 +119,29 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
     }
 
     /**
-     * Custom 후보키 View를 사용하기 위해 onCreateCandidatesView를 override 합니다.
-     * @return View 후보키 View 입니다.
+     * onEvaluateFullScreenMode
+     * 키보드를 보이지 않기 위해 override
+     * @return false
+     */
+    override fun onEvaluateFullscreenMode(): Boolean {
+        return false
+    }
+
+    /**
+     * onCreateCandidatesView
+     * 후보키에서 사용할 View를 리턴하기 위해 override
+     * @return 후보키 View
      */
     override fun onCreateCandidatesView(): View {
         return candidateScrollView
     }
 
     /**
-     * 키가 눌릴 때 호출되는 메서드입니다.
-     * @param keyCode Int 눌린 키의 코드입니다.
-     * @param event KeyEvent 키 이벤트 객체입니다.
-     * @return Boolean 처리 여부를 반환합니다.
+     * onKeyDown
+     * 키가 눌릴 때 입력된 키를 처리하기 위해 override
+     * @param keyCode 키 코드
+     * @param event 키 이벤트
+     * @return 처리 여부
      */
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         val inputConnection = currentInputConnection ?: return false
@@ -258,7 +267,8 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
                 return true
             }
         } else {
-            val asciiCode = event.unicodeChar
+            val metaStateWithoutCapsLock = event.metaState and KeyEvent.META_CAPS_LOCK_ON.inv()
+            val asciiCode = event.getUnicodeChar(metaStateWithoutCapsLock)
             if (asciiCode != 0) {
                 val processed = hangulInputProcessor.process(asciiCode)
                 updateComposingState(inputConnection, !processed)
@@ -277,10 +287,11 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
     }
 
     /**
-     * 키 업 이벤트 처리 메서드입니다.
-     * @param keyCode Int 키 코드입니다.
-     * @param event KeyEvent? 키 이벤트 객체입니다.
-     * @return Boolean 처리 여부를 반환합니다.
+     * onKeyUp
+     * 키가 올라왔을 때 입력된 키를 처리하기 위해 override
+     * @param keyCode 키 코드
+     * @param event 키 이벤트
+     * @return Boolean 처리 여부
      */
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
         val inputConnection = currentInputConnection ?: return false
@@ -298,6 +309,10 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
         return super.onKeyUp(keyCode, event)
     }
 
+    /**
+     * onUpdateSelection
+     * 커서 이동 시 로직 처리를 위해 override
+     */
     override fun onUpdateSelection(
         oldSelStart: Int,
         oldSelEnd: Int,
@@ -313,10 +328,12 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
         }
     }
 
+    /**
+     * onFinishInput
+     * 입력 종료시 입력 초기화를 위해 override
+     */
     override fun onFinishInput() {
         super.onFinishInput()
-
-        dismissCandidates()
 
         val commitString = hangulInputProcessor.flush()
         if (!commitString.isNullOrEmpty()) {
@@ -326,23 +343,29 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
         currentInputConnection.finishComposingText()
     }
 
+    /**
+     * onDestroy
+     * 서비스 파괴시 초기화 하기 위해 override
+     */
     override fun onDestroy() {
         super.onDestroy()
-        prefs.unregisterOnSharedPreferenceChangeListener(this)  // 리스너 해제
-        hangulInputProcessor.close()  // 리소스 해제
+        dismissCandidates()
+        prefs.unregisterOnSharedPreferenceChangeListener(this)
+        hangulInputProcessor.close()
     }
 
     /**
-     * 설정이 변경되었을 때 호출되는 메서드입니다.
-     * @param sharedPreferences SharedPreferences? 변경된 설정입니다.
-     * @param key String? 변경된 키입니다.
+     * onSharedPreferenceChanged
+     * 설정 변경 감지를 위해 override
+     * @param sharedPreferences 설정
+     * @param key 변경된 키
      */
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
         loadPreferences()
     }
 
     /**
-     * 설정값을 로드하는 메서드입니다.
+     * 설정값을 로드하는 메서드
      */
     private fun loadPreferences() {
         prefEnglishLayout = prefs.getString("pref_english_layout", PreferenceDefaults.pref_english_layout)
@@ -394,15 +417,15 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
     }
 
     /**
-     * 현재 모드가 한국어인지 확인하는 메서드입니다.
-     * @return Boolean 현재 한국어 모드 여부를 반환합니다.
+     * 현재 모드가 한국어인지 확인하는 메서드
+     * @return 한국어 모드 여부
      */
     private fun isKoreanMode(): Boolean {
         return currentImputMode == InputMode.KOREAN
     }
 
     /**
-     * 한글/영문 모드를 전환하는 메서드입니다.
+     * 한글/영문 모드를 전환하는 메서드
      */
     private fun switchLanguageModeToggle() {
         dismissCandidates()
@@ -412,7 +435,7 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
     }
 
     /**
-     * 한글/영문 모드를 전환하는 메서드입니다.
+     * 한글/영문 모드를 전환하는 메서드 (Subtype용)
      */
     private fun switchLanguageModeSubtype() {
         dismissCandidates()
@@ -425,6 +448,11 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
         Log.d("HangulInputMethodService", "Language mode switched to ${if (currentImputMode == InputMode.KOREAN) "Korean" else "English"}")
     }
 
+    /**
+     * onCurrentInputMethodSubtypeChanged
+     * Subtype 변경 이벤트를 처리하기 위해 override
+     * @param newSubtype Subtype
+     */
     override fun onCurrentInputMethodSubtypeChanged(newSubtype: InputMethodSubtype?) {
         super.onCurrentInputMethodSubtypeChanged(newSubtype)
         currentImputMode = if (newSubtype?.languageTag == "ko-KR") InputMode.KOREAN else InputMode.ENGLISH
@@ -432,8 +460,8 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
     }
 
     /**
-     * 한글/영문 모드를 상태바에 표시하거나 Toast로 알리는 메서드입니다.
-     * @param toastMessage Boolean Toast 메시지 표시 여부입니다.
+     * 한글/영문 모드 변경을 알리기 위한 메서드
+     * @param toastMessage Toast 메시지 표시 여부
      */
     private fun showLanguageMode(toastMessage: Boolean = true) {
         if (prefInputModeStatusbarMessage) {
@@ -451,9 +479,9 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
     }
 
     /**
-     * 입력 중인 한글 상태를 업데이트하는 메서드입니다.
-     * @param inputConnection InputConnection 입력 연결 객체입니다.
-     * @param forceCommit Boolean 강제 커밋 여부입니다.
+     * 입력 중인 한글 상태를 업데이트하는 메서드
+     * @param inputConnection 입력 연결 객체
+     * @param forceCommit 강제 커밋 여부
      */
     private fun updateComposingState(inputConnection: InputConnection, forceCommit: Boolean) {
         if (forceCommit) {
@@ -488,8 +516,8 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
     }
 
     /**
-     * 한자 입력을 처리하는 메서드입니다.
-     * @param inputConnection InputConnection 입력 연결 객체입니다.
+     * 한자 입력을 처리하는 메서드
+     * @param inputConnection 입력 연결 객체
      */
     private fun handleHanjaInput(inputConnection: InputConnection) {
         var hanjaText = ""
@@ -516,7 +544,7 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
             }
         }
 
-        if (hanjaText.isNotEmpty()) {
+        if (hanjaText.isNotEmpty() && hanjaText.length == 1) {
             val hanjaMap = hangulInputProcessor.matchExactHanjaMap(hanjaText)
             if (!hanjaMap.isNullOrEmpty()) {
                 showCandidates(hanjaText, hanjaMap, removeCursor)
@@ -525,10 +553,10 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
     }
 
     /**
-     * 후보자 뷰를 표시하는 메서드입니다. (한자 변환 처리)
-     * @param hanjaText String 원본 문자입니다.
-     * @param hanjaMap HashMap<String, String> 한자 후보 목록입니다.
-     * @param removeCursor Boolean 커서를 제거할지 여부입니다.
+     * 후보자 뷰를 표시하는 메서드
+     * @param hanjaText 원본 문자
+     * @param hanjaMap 후보 목록
+     * @param removeCursor 커서 문자 제거 여부
      */
     private fun showCandidates(hanjaText: String, hanjaMap: HashMap<String, String>, removeCursor: Boolean) {
         if (prefHanjaUseOverlay) {
@@ -541,10 +569,10 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
     }
 
     /**
-     * 오버레이 뷰에 한자 후보 목록을 추가하는 메서드입니다.
-     * @param hanjaText String 원본 문자입니다.
-     * @param hanjaMap HashMap<String, String> 한자 후보 목록입니다.
-     * @param removeCursor Boolean 커서를 제거할지 여부입니다.
+     * 오버레이 뷰에 한자 후보 목록을 추가하는 메서드
+     * @param hanjaText 원본 문자
+     * @param hanjaMap 후보 목록
+     * @param removeCursor 커서 문자 제거 여부
      */
     private fun populateHanjaOverlay(hanjaText: String, hanjaMap: HashMap<String, String>, removeCursor: Boolean) {
         hanjaOverlay?.dismissOverlay()
@@ -567,10 +595,10 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
     }
 
     /**
-     * 후보자 뷰에 한자 후보 목록을 추가하는 메서드입니다.
-     * @param hanjaText String 원본 문자입니다.
-     * @param hanjaMap HashMap<String, String> 한자 후보 목록입니다.
-     * @param removeCursor Boolean 커서를 제거할지 여부입니다.
+     * 후보자 뷰에 한자 후보 목록을 추가하는 메서드
+     * @param hanjaText 원본 문자
+     * @param hanjaMap 후보 목록
+     * @param removeCursor 커서 문자 제거 여부
      */
     private fun populateCandidates(hanjaText: String, hanjaMap: HashMap<String, String>, removeCursor: Boolean) {
         candidateScrollView.onCandidateSelectedListener = { selectedKey ->
@@ -592,8 +620,8 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
     }
 
     /**
-     * 후보자 뷰를 없애는 메서드입니다.
-     * @param dismissAll Boolean 모든 후보자를 제거할지 여부입니다.
+     * 후보자 뷰를 없애는 메서드
+     * @param dismissAll 모든 후보자를 제거할지 여부
      */
     private fun dismissCandidates(dismissAll: Boolean = false) {
         hanjaOverlay?.dismissOverlay()

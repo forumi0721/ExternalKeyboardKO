@@ -6,9 +6,9 @@ static HangulInputContext *context = nullptr;
 static HanjaTable* hanja_table = nullptr;
 
 /**
- * UCS4 형식의 문자열을 UTF-8로 변환합니다.
- * @param ucs4_str const ucschar* UCS4 형식의 문자열
- * @return std::string UTF-8로 변환된 문자열
+ * @brief UCS4 형식의 문자열을 UTF-8로 변환하는 메서드
+ * @param ucs4_str 입력 문자열
+ * @return 출력 문자열
  */
 std::string ucs4_to_utf8(const ucschar* ucs4_str) {
     std::string utf8_str;
@@ -43,8 +43,8 @@ std::string ucs4_to_utf8(const ucschar* ucs4_str) {
 }
 
 /**
- * Hangul 라이브러리를 초기화합니다.
- * @return jint 0: 성공, -1: 실패
+ * @brief libhangul 초기화 메서드
+ * @return 성공 여부
  */
 extern "C"
 JNIEXPORT jint JNICALL
@@ -53,8 +53,8 @@ Java_kr_stonecold_exkeyko_HangulInputProcessor_initialize(JNIEnv *env, jobject o
 }
 
 /**
- * Hangul 라이브러리를 종료합니다.
- * @return jint 0: 성공, -1: 실패
+ * @brief libhangul 종료 메서드
+ * @return 성공 여부
  */
 extern "C"
 JNIEXPORT jint JNICALL
@@ -63,8 +63,197 @@ Java_kr_stonecold_exkeyko_HangulInputProcessor_finalizeProcessor(JNIEnv *env, jo
 }
 
 /**
- * 새로운 HangulInputContext를 생성합니다.
- * @param keyboardLayout jstring 자판 레이아웃
+ * @brief 키 입력을 처리하여 한글 조합을 수행하는 메서드
+ * @param ascii 입력 키
+ * @return 성공 여부
+ */
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_kr_stonecold_exkeyko_HangulInputProcessor_process(JNIEnv *env, jobject obj, jint ascii) {
+    if (context != nullptr) {
+        bool result = hangul_ic_process(context, ascii);
+        return result ? JNI_TRUE : JNI_FALSE;
+    }
+    return JNI_FALSE;
+}
+
+/**
+ * @brief preedit 문자열을 반환하는 메서드
+ * @return preedit 문자열
+ */
+extern "C"
+JNIEXPORT jstring JNICALL
+Java_kr_stonecold_exkeyko_HangulInputProcessor_getPreeditString(JNIEnv *env, jobject obj) {
+    if (context != nullptr) {
+        const ucschar* preedit = hangul_ic_get_preedit_string(context);
+        if (preedit != nullptr) {
+            std::string utf8_preedit = ucs4_to_utf8(preedit);
+            return env->NewStringUTF(utf8_preedit.c_str());
+        }
+    }
+    return env->NewStringUTF("");
+}
+
+/**
+  * @brief commit 문자열을 반환하는 메서드
+  * @return commit 문자열
+  */
+extern "C"
+JNIEXPORT jstring JNICALL
+Java_kr_stonecold_exkeyko_HangulInputProcessor_getCommitString(JNIEnv *env, jobject obj) {
+    if (context != nullptr) {
+        const ucschar* commit = hangul_ic_get_commit_string(context);
+        if (commit != nullptr) {
+            std::string utf8_commit = ucs4_to_utf8(commit);
+            return env->NewStringUTF(utf8_commit.c_str());
+        }
+    }
+    return env->NewStringUTF("");
+}
+
+/**
+ * @brief 입력 상태 초기화 메서드
+ */
+extern "C"
+JNIEXPORT void JNICALL
+Java_kr_stonecold_exkeyko_HangulInputProcessor_reset(JNIEnv *env, jobject obj) {
+    if (context != nullptr) {
+        hangul_ic_reset(context);
+    }
+}
+
+/**
+ * @brief 입력 상태를 완료하고 commit 문자열을 반환하는 메서드
+ * @return commit 문자열
+ */
+extern "C"
+JNIEXPORT jstring JNICALL
+Java_kr_stonecold_exkeyko_HangulInputProcessor_flush(JNIEnv *env, jobject obj) {
+    if (context != nullptr) {
+        const ucschar* flushString = hangul_ic_flush(context);
+        if (flushString != nullptr) {
+            std::string utf8_flushString = ucs4_to_utf8(flushString);
+            return env->NewStringUTF(utf8_flushString.c_str());
+        }
+    }
+    return env->NewStringUTF("");
+}
+
+/**
+ * @brief backspace 입력 처리 메서드
+ * @return 성공 여부
+ */
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_kr_stonecold_exkeyko_HangulInputProcessor_backspace(JNIEnv *env, jobject obj) {
+    if (context != nullptr) {
+        bool result = hangul_ic_backspace(context);
+        return result ? JNI_TRUE : JNI_FALSE;
+    }
+    return JNI_FALSE;
+}
+
+/**
+ * @brief 조합 중인 문자가 비어 있는지 확인하는 메서드
+ * @return 조합 Empty 여부
+ */
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_kr_stonecold_exkeyko_HangulInputProcessor_isEmpty(JNIEnv *env, jobject obj) {
+    if (context != nullptr) {
+        bool result = hangul_ic_is_empty(context);
+        return result ? JNI_TRUE : JNI_FALSE;
+    }
+    return JNI_TRUE;
+}
+
+/**
+ * @brief 조합 중인 초성이 있는지 확인하는 메서드
+ * @return 초성 존재 여부
+ */
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_kr_stonecold_exkeyko_HangulInputProcessor_hasChoseong(JNIEnv *env, jobject obj) {
+    if (context != nullptr) {
+        bool result = hangul_ic_has_choseong(context);
+        return result ? JNI_TRUE : JNI_FALSE;
+    }
+    return JNI_FALSE;
+}
+
+/**
+ * @brief 조합 중인 중성이 있는지 확인하는 메서드
+ * @return 중성 존재 여부
+ */
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_kr_stonecold_exkeyko_HangulInputProcessor_hasJungseong(JNIEnv *env, jobject obj) {
+    if (context != nullptr) {
+        bool result = hangul_ic_has_jungseong(context);
+        return result ? JNI_TRUE : JNI_FALSE;
+    }
+    return JNI_FALSE;
+}
+
+/**
+ * @brief 조합 중인 종성이 있는지 확인하는 메서드
+ * @return 종성 존재 여부
+ */
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_kr_stonecold_exkeyko_HangulInputProcessor_hasJongseong(JNIEnv *env, jobject obj) {
+    if (context != nullptr) {
+        bool result = hangul_ic_has_jongseong(context);
+        return result ? JNI_TRUE : JNI_FALSE;
+    }
+    return JNI_FALSE;
+}
+
+/**
+ * @brief libhangul 옵션을 확인하는 코드
+ * @param option 옵션 코드
+ * @return 옵션 값
+ */
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_kr_stonecold_exkeyko_HangulInputProcessor_getOption(JNIEnv *env, jobject obj, jint option) {
+    if (context != nullptr) {
+        bool result = hangul_ic_get_option(context, option);
+        return result ? JNI_TRUE : JNI_FALSE;
+    }
+    return JNI_FALSE;
+}
+
+/**
+ * @brief libhangul 옵션을 설정하는 메서드
+ * @param option 옵션 코드
+ * @param value 옵션 값
+ */
+extern "C"
+JNIEXPORT void JNICALL
+Java_kr_stonecold_exkeyko_HangulInputProcessor_setOption(JNIEnv *env, jobject obj, jint option, jboolean value) {
+    if (context != nullptr) {
+        hangul_ic_set_option(context, option, value == JNI_TRUE);
+    }
+}
+
+/**
+ * @brief 한글 레이아웃을 설정하는 메서드
+ * @param keyboardLayout 레이아웃 ID
+ */
+extern "C"
+JNIEXPORT void JNICALL
+Java_kr_stonecold_exkeyko_HangulInputProcessor_selectKeyboard(JNIEnv *env, jobject obj, jstring keyboardLayout) {
+    const char *idStr = env->GetStringUTFChars(keyboardLayout, nullptr);
+    if (context != nullptr) {
+        hangul_ic_select_keyboard(context, idStr);
+    }
+    env->ReleaseStringUTFChars(keyboardLayout, idStr);
+}
+
+/**
+ * @brief hic 객체를 생성하는 메서드
+ * @param keyboardLayout 레이아웃 ID
  */
 extern "C"
 JNIEXPORT void JNICALL
@@ -82,196 +271,7 @@ Java_kr_stonecold_exkeyko_HangulInputProcessor_createContext(JNIEnv *env, jobjec
 }
 
 /**
- * 키 입력을 처리합니다.
- * @param ascii jint ASCII 값
- * @return jboolean true: 성공, false: 실패
- */
-extern "C"
-JNIEXPORT jboolean JNICALL
-Java_kr_stonecold_exkeyko_HangulInputProcessor_process(JNIEnv *env, jobject obj, jint ascii) {
-    if (context != nullptr) {
-        bool result = hangul_ic_process(context, ascii);
-        return result ? JNI_TRUE : JNI_FALSE;
-    }
-    return JNI_FALSE;
-}
-
-/**
- * Preedit 문자열을 반환합니다.
- * @return jstring Preedit 문자열
- */
-extern "C"
-JNIEXPORT jstring JNICALL
-Java_kr_stonecold_exkeyko_HangulInputProcessor_getPreeditString(JNIEnv *env, jobject obj) {
-    if (context != nullptr) {
-        const ucschar* preedit = hangul_ic_get_preedit_string(context);
-        if (preedit != nullptr) {
-            std::string utf8_preedit = ucs4_to_utf8(preedit);
-            return env->NewStringUTF(utf8_preedit.c_str());
-        }
-    }
-    return env->NewStringUTF("");
-}
-
-/**
- * Commit 문자열을 반환합니다.
- * @return jstring Commit 문자열
- */
-extern "C"
-JNIEXPORT jstring JNICALL
-Java_kr_stonecold_exkeyko_HangulInputProcessor_getCommitString(JNIEnv *env, jobject obj) {
-    if (context != nullptr) {
-        const ucschar* commit = hangul_ic_get_commit_string(context);
-        if (commit != nullptr) {
-            std::string utf8_commit = ucs4_to_utf8(commit);
-            return env->NewStringUTF(utf8_commit.c_str());
-        }
-    }
-    return env->NewStringUTF("");
-}
-
-/**
- * HangulInputContext를 리셋합니다.
- */
-extern "C"
-JNIEXPORT void JNICALL
-Java_kr_stonecold_exkeyko_HangulInputProcessor_reset(JNIEnv *env, jobject obj) {
-    if (context != nullptr) {
-        hangul_ic_reset(context);
-    }
-}
-
-/**
- * Flush 상태를 반환합니다.
- * @return jstring Flush 문자열
- */
-extern "C"
-JNIEXPORT jstring JNICALL
-Java_kr_stonecold_exkeyko_HangulInputProcessor_flush(JNIEnv *env, jobject obj) {
-    if (context != nullptr) {
-        const ucschar* flushString = hangul_ic_flush(context);
-        if (flushString != nullptr) {
-            std::string utf8_flushString = ucs4_to_utf8(flushString);
-            return env->NewStringUTF(utf8_flushString.c_str());
-        }
-    }
-    return env->NewStringUTF("");
-}
-
-/**
- * 백스페이스를 처리합니다.
- * @return jboolean true: 성공, false: 실패
- */
-extern "C"
-JNIEXPORT jboolean JNICALL
-Java_kr_stonecold_exkeyko_HangulInputProcessor_backspace(JNIEnv *env, jobject obj) {
-    if (context != nullptr) {
-        bool result = hangul_ic_backspace(context);
-        return result ? JNI_TRUE : JNI_FALSE;
-    }
-    return JNI_FALSE;
-}
-
-/**
- * HangulInputContext가 비었는지 확인합니다.
- * @return jboolean true: 비었음, false: 비어있지 않음
- */
-extern "C"
-JNIEXPORT jboolean JNICALL
-Java_kr_stonecold_exkeyko_HangulInputProcessor_isEmpty(JNIEnv *env, jobject obj) {
-    if (context != nullptr) {
-        bool result = hangul_ic_is_empty(context);
-        return result ? JNI_TRUE : JNI_FALSE;
-    }
-    return JNI_TRUE;
-}
-
-/**
- * 초성이 있는지 확인합니다.
- * @return jboolean true: 초성 있음, false: 초성 없음
- */
-extern "C"
-JNIEXPORT jboolean JNICALL
-Java_kr_stonecold_exkeyko_HangulInputProcessor_hasChoseong(JNIEnv *env, jobject obj) {
-    if (context != nullptr) {
-        bool result = hangul_ic_has_choseong(context);
-        return result ? JNI_TRUE : JNI_FALSE;
-    }
-    return JNI_FALSE;
-}
-
-/**
- * 중성이 있는지 확인합니다.
- * @return jboolean true: 중성 있음, false: 중성 없음
- */
-extern "C"
-JNIEXPORT jboolean JNICALL
-Java_kr_stonecold_exkeyko_HangulInputProcessor_hasJungseong(JNIEnv *env, jobject obj) {
-    if (context != nullptr) {
-        bool result = hangul_ic_has_jungseong(context);
-        return result ? JNI_TRUE : JNI_FALSE;
-    }
-    return JNI_FALSE;
-}
-
-/**
- * 종성이 있는지 확인합니다.
- * @return jboolean true: 종성 있음, false: 종성 없음
- */
-extern "C"
-JNIEXPORT jboolean JNICALL
-Java_kr_stonecold_exkeyko_HangulInputProcessor_hasJongseong(JNIEnv *env, jobject obj) {
-    if (context != nullptr) {
-        bool result = hangul_ic_has_jongseong(context);
-        return result ? JNI_TRUE : JNI_FALSE;
-    }
-    return JNI_FALSE;
-}
-
-/**
- * 옵션 값을 가져옵니다.
- * @param option jint 옵션 인덱스
- * @return jboolean 옵션 값 (true/false)
- */
-extern "C"
-JNIEXPORT jboolean JNICALL
-Java_kr_stonecold_exkeyko_HangulInputProcessor_getOption(JNIEnv *env, jobject obj, jint option) {
-    if (context != nullptr) {
-        bool result = hangul_ic_get_option(context, option);
-        return result ? JNI_TRUE : JNI_FALSE;
-    }
-    return JNI_FALSE;
-}
-
-/**
- * 옵션을 설정합니다.
- * @param option jint 옵션 인덱스
- * @param value jboolean 옵션 값
- */
-extern "C"
-JNIEXPORT void JNICALL
-Java_kr_stonecold_exkeyko_HangulInputProcessor_setOption(JNIEnv *env, jobject obj, jint option, jboolean value) {
-    if (context != nullptr) {
-        hangul_ic_set_option(context, option, value == JNI_TRUE);
-    }
-}
-
-/**
- * 키보드 배열을 선택합니다.
- * @param id jstring 키보드 배열 ID
- */
-extern "C"
-JNIEXPORT void JNICALL
-Java_kr_stonecold_exkeyko_HangulInputProcessor_selectKeyboard(JNIEnv *env, jobject obj, jstring id) {
-    const char *idStr = env->GetStringUTFChars(id, nullptr);
-    if (context != nullptr) {
-        hangul_ic_select_keyboard(context, idStr);
-    }
-    env->ReleaseStringUTFChars(id, idStr);
-}
-
-/**
- * HangulInputContext를 삭제합니다.
+ * @brief hic 객체를 삭제하는 메서드
  */
 extern "C"
 JNIEXPORT void JNICALL
@@ -283,8 +283,8 @@ Java_kr_stonecold_exkeyko_HangulInputProcessor_deleteContext(JNIEnv *env, jobjec
 }
 
 /**
- * Transliteration 옵션 사용 여부를 확인합니다.
- * @return jboolean true: 사용, false: 미사용
+ * @brief hic가 transliteration 방식인지 확인하는 메서드
+ * @return transliteration 여부
  */
 extern "C"
 JNIEXPORT jboolean JNICALL
@@ -297,9 +297,9 @@ Java_kr_stonecold_exkeyko_HangulInputProcessor_isTransliteration(JNIEnv *env, jo
 }
 
 /**
- * 한자 테이블을 로드합니다.
- * @param filePath jstring 한자 테이블 파일 경로
- * @return jboolean true: 로드 성공, false: 로드 실패
+ * @brief 한자 테이블 로드 메서드
+ * @param filePath 한자 테이블 파일 경로
+ * @return 성공 여부
  */
 extern "C"
 JNIEXPORT jboolean JNICALL
@@ -312,7 +312,7 @@ Java_kr_stonecold_exkeyko_HangulInputProcessor_loadHanjaTable(JNIEnv *env, jobje
 }
 
 /**
- * 한자 테이블을 삭제합니다.
+ * @brief 한자 테이블 삭제 메서드
  */
 extern "C"
 JNIEXPORT void JNICALL
@@ -324,9 +324,9 @@ Java_kr_stonecold_exkeyko_HangulInputProcessor_deleteHanjaTable(JNIEnv *env, job
 }
 
 /**
- * 정확히 일치하는 한자를 검색합니다.
- * @param key jstring 검색 키
- * @return jobjectArray 일치하는 한자의 배열 (String[])
+ * @brief 정확하게 일치하는 한자를 검색하는 메서드
+ * @param key 입력 값
+ * @return 한자 배열
  */
 extern "C"
 JNIEXPORT jobjectArray JNICALL
@@ -360,9 +360,9 @@ Java_kr_stonecold_exkeyko_HangulInputProcessor_matchExactHanja(JNIEnv *env, jobj
 }
 
 /**
- * 정확히 일치하는 한자를 검색하여 Map으로 반환합니다.
- * @param key jstring 검색 키
- * @return jobject 한자와 뜻이 저장된 LinkedHashMap 객체
+ * @brief 정확하게 일치하는 한자를 검색하는 메서드 (Map)
+ * @param key 입력 값
+ * @return 한자 맵
  */
 extern "C"
 JNIEXPORT jobject JNICALL
@@ -401,9 +401,9 @@ Java_kr_stonecold_exkeyko_HangulInputProcessor_matchExactHanjaMap(JNIEnv *env, j
 }
 
 /**
- * 접두사로 일치하는 한자를 검색합니다.
- * @param key jstring 접두사 키
- * @return jobjectArray 일치하는 한자의 배열 (String[])
+ * @brief 접두사로 일치하는 한자를 검색하는 메서드
+ * @param key 입력 값
+ * @return Array<String>? 한자 배열
  */
 extern "C"
 JNIEXPORT jobjectArray JNICALL
@@ -436,9 +436,9 @@ Java_kr_stonecold_exkeyko_HangulInputProcessor_matchPrefixHanja(JNIEnv *env, job
 }
 
 /**
- * 접미사로 일치하는 한자를 검색합니다.
- * @param key jstring 접미사 키
- * @return jobjectArray 일치하는 한자의 배열 (String[])
+ * @brief 접미사로 일치하는 한자를 검색하는 메서드
+ * @param key 입력 값
+ * @return 한자 배열
  */
 extern "C"
 JNIEXPORT jobjectArray JNICALL

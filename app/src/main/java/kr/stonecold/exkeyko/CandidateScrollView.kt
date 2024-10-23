@@ -7,13 +7,13 @@ import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 
 /**
- * 후보 단어를 스크롤 가능한 뷰로 보여주는 클래스입니다.
- * @param context Context 컨텍스트를 전달합니다.
+ * 안드로이드 기본 기능인 후보뷰을 이횽하여 한자/심볼 선택을 띄워주는 View 클래스
+ * @param context Context
  */
 class CandidateScrollView(context: Context) : HorizontalScrollView(context) {
 
     /**
-     * 후보 버튼들을 담을 LinearLayout
+     * 후보키를 표히할 Container
      */
     private val candidatesContainer: LinearLayout = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
@@ -24,20 +24,22 @@ class CandidateScrollView(context: Context) : HorizontalScrollView(context) {
     }
 
     /**
-     * 후보가 선택되었을 때 호출되는 리스너
+     * Init
      */
-    var onCandidateSelectedListener: ((String) -> Unit)? = null
-
     init {
         // 스크롤뷰에 LinearLayout을 추가
         addView(candidatesContainer)
     }
 
     /**
-     * 한자 후보를 추가하는 함수입니다.
-     * UI 스레드에서 실행되도록 post를 사용합니다.
-     * @param hanjaText String 원본 문자입니다.
-     * @param hanjaMap HashMap<String, String>? 한자와 그 설명을 담은 맵입니다.
+     * 후보 선택시 이벤트 처리를 위해 호출되는 리스너
+     */
+    var onCandidateSelectedListener: ((String) -> Unit)? = null
+
+    /**
+     * 후보키를 추가하는 메서드
+     * @param hanjaText 원본 문자
+     * @param hanjaMap 화면 표시를 위한 한자와 Comment를 담은 Map
      */
     fun addCards(hanjaText: String, hanjaMap: HashMap<String, String>?) {
         // 기존에 추가된 모든 후보 버튼 제거

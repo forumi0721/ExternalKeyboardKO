@@ -19,31 +19,32 @@ import android.widget.ScrollView
 import android.widget.TextView
 
 /**
- * 한자 후보를 오버레이로 표시하는 클래스입니다.
- * @param context Context 컨텍스트를 전달합니다.
+ * 한자 후보를 오버레이로 표시하기 위한 View 클래스
+ * @param context Context
  */
 class HanjaOverlay(private val context: Context) : Application.ActivityLifecycleCallbacks {
 
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private var overlayView: View? = null
 
+    /**
+     * Init
+     */
     init {
-        // 앱 상태 변화를 감지하기 위해 리스너 등록
         (context.applicationContext as Application).registerActivityLifecycleCallbacks(this)
         Log.d("HanjaOverlay", "ActivityLifecycleCallbacks registered")
     }
 
-    // 한자 선택 리스너
     /**
-     * 한자 후보가 선택되었을 때 호출되는 리스너입니다.
+     * 후보 선택시 이벤트 처리를 위해 호출되는 리스너
      */
     var onCandidateSelectedListener: ((String) -> Unit)? = null
 
     /**
-     * 한자 후보를 오버레이로 추가하는 함수입니다.
-     * @param hanjaText String 원본 문자입니다.
-     * @param hanjaMap HashMap<String, String> 한자와 그 설명을 담은 맵입니다.
-     * @param direction String 방향 설정 ("v"는 세로, "h"는 가로), 기본값은 "v"입니다.
+     * 한자 맵를 화면에 표시하는 메서드
+     * @param hanjaText 원본 문자
+     * @param hanjaMap 한자 맵
+     * @param direction Overlay 방향 (v: 세로, h: 가로)
      */
     @SuppressLint("ClickableViewAccessibility", "SetTextI18n")
     fun showHanjaOverlay(
@@ -222,7 +223,7 @@ class HanjaOverlay(private val context: Context) : Application.ActivityLifecycle
     }
 
     /**
-     * 오버레이를 제거하는 함수입니다.
+     * 오버레이를 제거하는 메서드
      */
     fun dismissOverlay() {
         if (overlayView != null) {
@@ -233,8 +234,9 @@ class HanjaOverlay(private val context: Context) : Application.ActivityLifecycle
     }
 
     /**
-     * 액티비티가 일시 정지될 때 호출되며, 오버레이를 제거합니다.
-     * @param activity Activity 현재 액티비티입니다.
+     * 액티비티 일시 정지 메서드
+     * 일시 정지사 오버레이를 제거
+     * @param activity 현재 액티비티
      */
     override fun onActivityPaused(activity: Activity) {
         dismissOverlay()
