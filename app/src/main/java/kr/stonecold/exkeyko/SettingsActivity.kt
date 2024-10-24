@@ -705,7 +705,7 @@ fun openInputMethodSubtypeSettings(context: Context) {
     val intent = Intent(Settings.ACTION_INPUT_METHOD_SUBTYPE_SETTINGS).apply {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK
         putExtra(Settings.EXTRA_INPUT_METHOD_ID, imeId)
-        putExtra("android.intent.extra.TITLE", context.getString(R.string.subtype_settings_title));
+        putExtra("android.intent.extra.TITLE", context.getString(R.string.subtype_settings_title))
     }
     context.startActivity(intent)
 }

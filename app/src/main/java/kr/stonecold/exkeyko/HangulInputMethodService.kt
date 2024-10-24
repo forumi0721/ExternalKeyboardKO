@@ -1,7 +1,6 @@
 package kr.stonecold.exkeyko
 
 import android.Manifest
-import android.content.ComponentName
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager

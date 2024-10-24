@@ -59,9 +59,9 @@ class CandidateScrollView(context: Context) : HorizontalScrollView(context) {
             // 한자 맵을 순회하며 각 한자와 설명으로 버튼을 생성
             hanjaMap.forEach { (key, desc) ->
                 val buttonText = when {
-                    desc.isNotEmpty() -> "$key : $desc"
+                    desc.isNotEmpty() -> "$key${System.lineSeparator()}$desc"
                     isChoseong -> key
-                    else -> "$key : $hanjaText"
+                    else -> "$key${System.lineSeparator()}$hanjaText"
                 }
 
                 val candidateButton = Button(context).apply {
