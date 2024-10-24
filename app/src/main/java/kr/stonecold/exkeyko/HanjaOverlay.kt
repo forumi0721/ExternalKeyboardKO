@@ -9,6 +9,7 @@ import android.graphics.PixelFormat
 import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
+import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewTreeObserver
@@ -193,6 +194,19 @@ class HanjaOverlay(private val context: Context) : Application.ActivityLifecycle
             false
         }
 
+        // 가로 출력시 스크롤
+        if (direction == "h") {
+            scrollView.setOnGenericMotionListener { _, event ->
+                if (event.action == MotionEvent.ACTION_SCROLL && event.isFromSource(InputDevice.SOURCE_CLASS_POINTER)) {
+                    val deltaX = event.getAxisValue(MotionEvent.AXIS_VSCROLL)
+                    scrollView.scrollBy((deltaX * 100).toInt(), 0) // 스크롤 값을 조절하여 스크롤 속도 조정
+                    true
+                } else {
+                    false
+                }
+            }
+        }
+
         // ViewTreeObserver를 사용하여 뷰가 렌더링된 후에 버튼 크기를 통일
         val viewTreeObserver = candidatesContainer.viewTreeObserver
         viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
@@ -234,11 +248,20 @@ class HanjaOverlay(private val context: Context) : Application.ActivityLifecycle
     }
 
     /**
-     * 액티비티 일시 정지 메서드
-     * 일시 정지사 오버레이를 제거
-     * @param activity 현재 액티비티
+     * onActivityPaused
+     * 오버레이 제거를 위해 override
+     * @param activity activity
      */
     override fun onActivityPaused(activity: Activity) {
+        dismissOverlay()
+    }
+
+    /**
+     * onActivityStopped
+     * 오버레이 제거를 위해 override
+     * @param activity activity
+     */
+    override fun onActivityStopped(activity: Activity) {
         dismissOverlay()
     }
 
@@ -246,7 +269,6 @@ class HanjaOverlay(private val context: Context) : Application.ActivityLifecycle
     override fun onActivityResumed(activity: Activity) {}
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
     override fun onActivityStarted(activity: Activity) {}
-    override fun onActivityStopped(activity: Activity) {}
     override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
     override fun onActivityDestroyed(activity: Activity) {}
 }
