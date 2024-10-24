@@ -8,9 +8,43 @@ import android.util.Log
 class EnglishConverter {
 
     /**
-     * 현재 사용 중인 키보드 레이아웃 타입 (q, c, d)
+     * 현재 사용 중인 키보드 레이아웃 타입 (q, c, d, w)
      */
     private var layoutType = "q" // 기본값은 QWERTY 레이아웃
+
+    /**
+     * QWERTY에서 Dvorak으로의 소문자 키 매핑
+     */
+    private val qwertyToDvorakLowerCaseMap = mapOf(
+        // Row 1
+        'q' to '\'', 'w' to ',', 'e' to '.', 'r' to 'p', 't' to 'y',
+        'y' to 'f', 'u' to 'g', 'i' to 'c', 'o' to 'r', 'p' to 'l',
+        '[' to '/', ']' to '=', '-' to '[', '=' to ']',
+        // Row 2
+        'a' to 'a', 's' to 'o', 'd' to 'e', 'f' to 'u', 'g' to 'i',
+        'h' to 'd', 'j' to 'h', 'k' to 't', 'l' to 'n', ';' to 's',
+        '\'' to '-',
+        // Row 3
+        'z' to ';', 'x' to 'q', 'c' to 'j', 'v' to 'k', 'b' to 'x',
+        'n' to 'b', 'm' to 'm', ',' to 'w', '.' to 'v', '/' to 'z'
+    )
+
+    /**
+     * QWERTY에서 Dvorak으로의 대문자 키 매핑
+     */
+    private val qwertyToDvorakUpperCaseMap = mapOf(
+        // Row 1
+        'Q' to '"', 'W' to '<', 'E' to '>', 'R' to 'P', 'T' to 'Y',
+        'Y' to 'F', 'U' to 'G', 'I' to 'C', 'O' to 'R', 'P' to 'L',
+        '{' to '?', '}' to '+', '_' to '{', '+' to '}',
+        // Row 2
+        'A' to 'A', 'S' to 'O', 'D' to 'E', 'F' to 'U', 'G' to 'I',
+        'H' to 'D', 'J' to 'H', 'K' to 'T', 'L' to 'N', ':' to 'S',
+         '"' to '_',
+        // Row 3
+        'Z' to ':', 'X' to 'Q', 'C' to 'J', 'V' to 'K', 'B' to 'X',
+        'N' to 'B', 'M' to 'M', '<' to 'W', '>' to 'V', '?' to 'Z'
+    )
 
     /**
      * QWERTY에서 Colemak으로의 소문자 키 매핑
@@ -43,33 +77,33 @@ class EnglishConverter {
     )
 
     /**
-     * QWERTY에서 Dvorak으로의 소문자 키 매핑
+     * QWERTY에서 Workman으로의 소문자 키 매핑
      */
-    private val qwertyToDvorakLowerCaseMap = mapOf(
+    private val qwertyToWorkmanLowerCaseMap = mapOf(
         // Row 1
-        'q' to '\'', 'w' to ',', 'e' to '.', 'r' to 'p', 't' to 'y',
-        'y' to 'f', 'u' to 'g', 'i' to 'c', 'o' to 'r', 'p' to 'l',
+        'q' to 'q', 'w' to 'd', 'e' to 'r', 'r' to 'w', 't' to 'b',
+        'y' to 'j', 'u' to 'f', 'i' to 'u', 'o' to 'p', 'p' to ';',
         // Row 2
-        'a' to 'a', 's' to 'o', 'd' to 'e', 'f' to 'u', 'g' to 'i',
-        'h' to 'd', 'j' to 'h', 'k' to 't', 'l' to 'n', ';' to 's',
+        'a' to 'a', 's' to 's', 'd' to 'h', 'f' to 't', 'g' to 'g',
+        'h' to 'y', 'j' to 'n', 'k' to 'e', 'l' to 'o', ';' to 'i',
         // Row 3
-        'z' to ';', 'x' to 'q', 'c' to 'j', 'v' to 'k', 'b' to 'x',
-        'n' to 'b', 'm' to 'm', ',' to 'w', '.' to 'v', '/' to 'z'
+        'z' to 'z', 'x' to 'x', 'c' to 'm', 'v' to 'c', 'b' to 'v',
+        'n' to 'k', 'm' to 'l'
     )
 
     /**
-     * QWERTY에서 Dvorak으로의 대문자 키 매핑
+     * QWERTY에서 Workman으로의 대문자 키 매핑
      */
-    private val qwertyToDvorakUpperCaseMap = mapOf(
+    private val qwertyToWorkmanUpperCaseMap = mapOf(
         // Row 1
-        'Q' to '"', 'W' to '<', 'E' to '>', 'R' to 'P', 'T' to 'Y',
-        'Y' to 'F', 'U' to 'G', 'I' to 'C', 'O' to 'R', 'P' to 'L',
+        'Q' to 'Q', 'W' to 'D', 'E' to 'R', 'R' to 'W', 'T' to 'B',
+        'Y' to 'J', 'U' to 'F', 'I' to 'U', 'O' to 'P', 'P' to ':',
         // Row 2
-        'A' to 'A', 'S' to 'O', 'D' to 'E', 'F' to 'U', 'G' to 'I',
-        'H' to 'D', 'J' to 'H', 'K' to 'T', 'L' to 'N', ':' to 'S',
+        'A' to 'A', 'S' to 'S', 'D' to 'H', 'F' to 'T', 'G' to 'G',
+        'H' to 'Y', 'J' to 'N', 'K' to 'E', 'L' to 'O', ':' to 'I',
         // Row 3
-        'Z' to ':', 'X' to 'Q', 'C' to 'J', 'V' to 'K', 'B' to 'X',
-        'N' to 'B', 'M' to 'M', '<' to 'W', '>' to 'V', '?' to 'Z'
+        'Z' to 'Z', 'X' to 'X', 'C' to 'M', 'V' to 'C', 'B' to 'V',
+        'N' to 'K', 'M' to 'L'
     )
 
     /**
@@ -93,6 +127,9 @@ class EnglishConverter {
                 ?: inputChar
             "d" -> qwertyToDvorakLowerCaseMap[inputChar]
                 ?: qwertyToDvorakUpperCaseMap[inputChar]
+                ?: inputChar
+            "w" -> qwertyToWorkmanLowerCaseMap[inputChar]
+                ?: qwertyToWorkmanUpperCaseMap[inputChar]
                 ?: inputChar
             else -> inputChar
         }

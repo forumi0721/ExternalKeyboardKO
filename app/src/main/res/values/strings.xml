@@ -28,6 +28,7 @@
     <string name="english_qwerty">쿼티 (Qwerty)</string>
     <string name="english_dvorak">드보락 (Dvorak)</string>
     <string name="english_colemak">콜맥 (Colemak)</string>
+    <string name="english_workman">"워크맨 (Workman)</string>
 
     <string name="korean_keyboard_title">한글 배열</string>
     <string name="korean_keyboard_desc">한글 자판의 두벌식, 세벌식 등 자판 배열을 설정합니다.</string>

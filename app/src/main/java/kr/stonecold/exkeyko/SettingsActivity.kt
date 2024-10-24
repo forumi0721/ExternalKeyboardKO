@@ -154,6 +154,7 @@ fun SettingsScreen(context: SettingsActivity) {
         stringResource(R.string.english_qwerty) to "q",
         stringResource(R.string.english_dvorak) to "d",
         stringResource(R.string.english_colemak) to "c",
+        stringResource(R.string.english_workman) to "w",
     )
     val optionKoreanKeyboard = listOf(
         stringResource(R.string.hangul_2) to "2",

@@ -199,7 +199,7 @@ class HanjaOverlay(private val context: Context) : Application.ActivityLifecycle
             scrollView.setOnGenericMotionListener { _, event ->
                 if (event.action == MotionEvent.ACTION_SCROLL && event.isFromSource(InputDevice.SOURCE_CLASS_POINTER)) {
                     val deltaX = event.getAxisValue(MotionEvent.AXIS_VSCROLL)
-                    scrollView.scrollBy((deltaX * 100).toInt(), 0) // 스크롤 값을 조절하여 스크롤 속도 조정
+                    scrollView.scrollBy((deltaX * -100).toInt(), 0) // 스크롤 값을 조절하여 스크롤 속도 조정
                     true
                 } else {
                     false
