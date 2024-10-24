@@ -105,6 +105,20 @@ class SettingsActivity : ComponentActivity() {
             startActivity(intent)
         }
     }
+
+    object AppStatus {
+        var isSettingsActive: Boolean = false
+    }
+
+    override fun onResume() {
+        super.onResume()
+        AppStatus.isSettingsActive = true
+    }
+
+    override fun onPause() {
+        super.onPause()
+        AppStatus.isSettingsActive = false
+    }
 }
 
 /**

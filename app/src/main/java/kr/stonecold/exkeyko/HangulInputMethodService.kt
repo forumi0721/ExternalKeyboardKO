@@ -519,6 +519,14 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
      * @param inputConnection 입력 연결 객체
      */
     private fun handleHanjaInput(inputConnection: InputConnection) {
+        if (!prefHanjaUseOverlay && SettingsActivity.AppStatus.isSettingsActive) {
+            toast?.cancel()
+            val message = getString(R.string.msg_settings_active_warning)
+            toast = Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT)
+            toast?.show()
+
+            return
+        }
         var hanjaText = ""
         var removeCursor = false
 
