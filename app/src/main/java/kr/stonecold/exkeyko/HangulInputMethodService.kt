@@ -335,11 +335,10 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
         super.onFinishInput()
 
         val commitString = hangulInputProcessor.flush()
-        if (!commitString.isNullOrEmpty()) {
+        if (!commitString.isNullOrEmpty() && currentInputConnection != null) {
             currentInputConnection.commitText(commitString, 1)
+            currentInputConnection.finishComposingText()
         }
-        hangulInputProcessor.reset()
-        currentInputConnection.finishComposingText()
     }
 
     /**

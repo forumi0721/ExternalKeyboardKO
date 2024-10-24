@@ -46,6 +46,8 @@ class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        AppStatus.isSettingsActive = true
+
         val prefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
         val isFirstLaunch = prefs.getBoolean("first_launch", true)
 

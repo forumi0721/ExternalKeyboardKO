@@ -135,17 +135,24 @@ class HanjaOverlay(private val context: Context) : Application.ActivityLifecycle
             }
 
             // 레이아웃에 TextView 추가
-            if (direction == "v") {
-                // 세로일 때 좌우 배치 및 공백 추가
-                candidateLayout.addView(keyTextView)
-                candidateLayout.addView(commentTextView)
-            } else {
-                // 가로일 때 위아래 배치
-                candidateLayout.addView(keyTextView)
-                candidateLayout.addView(commentTextView)
+            candidateLayout.addView(keyTextView)
+            candidateLayout.addView(commentTextView)
+
+            // 터치와 마우스 클릭 처리
+            candidateLayout.setOnTouchListener { _, event ->
+                if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_BUTTON_PRESS) {
+                    if (event.source == InputDevice.SOURCE_MOUSE || event.source == InputDevice.SOURCE_TOUCHSCREEN) {
+                        // 마우스 클릭 또는 터치 이벤트 처리
+                        Log.d("HanjaOverlay", "Candidate '$key' with comment '$comment' selected")
+                        dismissOverlay()
+                        onCandidateSelectedListener?.invoke(key)
+                        return@setOnTouchListener true
+                    }
+                }
+                false
             }
 
-            // 클릭 이벤트 추가
+            // 펜 클릭 처리
             candidateLayout.setOnClickListener {
                 Log.d("HanjaOverlay", "Candidate '$key' with comment '$comment' selected")
                 dismissOverlay()

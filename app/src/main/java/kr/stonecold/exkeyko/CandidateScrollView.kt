@@ -85,9 +85,10 @@ class CandidateScrollView(context: Context) : HorizontalScrollView(context) {
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT
                     )
+
                     // 터치와 마우스 클릭 처리
                     setOnTouchListener { _, event ->
-                        if (event.action == MotionEvent.ACTION_UP || event.action == MotionEvent.ACTION_BUTTON_PRESS) {
+                        if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_BUTTON_PRESS) {
                             if (event.source == InputDevice.SOURCE_MOUSE || event.source == InputDevice.SOURCE_TOUCHSCREEN) {
                                 onCandidateSelectedListener?.invoke(key)
                                 Log.d("CandidateScrollView", "Candidate selected: key='$key', desc='$desc'")
@@ -96,6 +97,7 @@ class CandidateScrollView(context: Context) : HorizontalScrollView(context) {
                         }
                         false
                     }
+
                     // 펜 클릭 처리
                     setOnClickListener {
                         onCandidateSelectedListener?.invoke(key)
