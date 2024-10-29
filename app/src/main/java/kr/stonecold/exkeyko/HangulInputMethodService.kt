@@ -27,6 +27,7 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
 
     // 입력 처리 관련 변수
     private lateinit var hangulInputProcessor: HangulInputProcessor
+    private val koreanChecker = KoreanChecker()
     private val englishConverter = EnglishConverter()
     private var currentImputMode:InputMode = InputMode.ENGLISH
     private enum class InputMode { ENGLISH, KOREAN, }
@@ -144,17 +145,20 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
      */
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         val inputConnection = currentInputConnection ?: return false
+        val asciiChar = event.unicodeChar.toChar()
 
-        //Log.d("KeyEvent", "keyCode: $keyCode (${KeyEvent.keyCodeToString(keyCode)})")
-        //Log.d("KeyEvent", "event: $event")
-        //Log.d("KeyEvent", "Shift 상태: ${event.isShiftPressed}")
-        //Log.d("KeyEvent", "Ctrl 상태: ${event.isCtrlPressed}")
-        //Log.d("KeyEvent", "Alt 상태: ${event.isAltPressed}")
-        //Log.d("KeyEvent", "Meta 상태: ${event.isMetaPressed}")
-        //Log.d("KeyEvent", "Function 상태: ${event.isFunctionPressed}")
-        //Log.d("KeyEvent", "Caps Lock 상태: ${event.isCapsLockOn}")
-        //Log.d("KeyEvent", "Num Lock 상태: ${event.isNumLockOn}")
-        //Log.d("KeyEvent", "Scroll Lock 상태: ${event.isScrollLockOn}")
+        if (BuildConfig.DEBUG) {
+            Log.d("KeyEvent", "keyCode: $keyCode (${KeyEvent.keyCodeToString(keyCode)})")
+            Log.d("KeyEvent", "event: $event")
+            Log.d("KeyEvent", "Shift 상태: ${event.isShiftPressed}")
+            Log.d("KeyEvent", "Ctrl 상태: ${event.isCtrlPressed}")
+            Log.d("KeyEvent", "Alt 상태: ${event.isAltPressed}")
+            Log.d("KeyEvent", "Meta 상태: ${event.isMetaPressed}")
+            Log.d("KeyEvent", "Function 상태: ${event.isFunctionPressed}")
+            Log.d("KeyEvent", "Caps Lock 상태: ${event.isCapsLockOn}")
+            Log.d("KeyEvent", "Num Lock 상태: ${event.isNumLockOn}")
+            Log.d("KeyEvent", "Scroll Lock 상태: ${event.isScrollLockOn}")
+        }
 
         // ESC 키가 눌리면 영문 모드로 전환
         if (keyCode == KeyEvent.KEYCODE_ESCAPE && event.metaState == 0) {
@@ -227,7 +231,6 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
             if (prefEnglishLayout == "q") {
                 return super.onKeyDown(keyCode, event)
             } else {
-                val asciiChar = event.unicodeChar.toChar()
                 if (asciiChar != 0.toChar()) {
                     val convertedChar = englishConverter.convert(asciiChar)
                     inputConnection.commitText(convertedChar.toString(), 1)
@@ -239,7 +242,6 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
 
         // 특수 키 처리
         if (event.isCtrlPressed || event.isAltPressed || event.isMetaPressed) {
-            val asciiChar = event.unicodeChar.toChar()
             if (asciiChar != 0.toChar()) {
                 updateComposingState(inputConnection, true)
                 return super.onKeyDown(keyCode, event)
@@ -265,9 +267,11 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
                 }
                 return true
             }
+        } else if (keyCode == KeyEvent.KEYCODE_SPACE || keyCode == KeyEvent.KEYCODE_ENTER) {
+            updateComposingState(inputConnection, true)
+            return super.onKeyDown(keyCode, event)
         } else {
-            val metaStateWithoutCapsLock = event.metaState and KeyEvent.META_CAPS_LOCK_ON.inv()
-            val asciiCode = event.getUnicodeChar(metaStateWithoutCapsLock)
+            val asciiCode = if (event.isCapsLockOn) {  event.getUnicodeChar(event.metaState and KeyEvent.META_CAPS_LOCK_ON.inv()) } else { event.unicodeChar }
             if (asciiCode != 0) {
                 val processed = hangulInputProcessor.process(asciiCode)
                 updateComposingState(inputConnection, !processed)
@@ -390,6 +394,9 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
         hangulInputProcessor.setOption(0, prefHangulAutoReorder)
         hangulInputProcessor.setOption(1, prefHangulCombiOnDoubleStroke)
         hangulInputProcessor.setOption(2, prefHangulNonChoseongCombi)
+
+        // KoreanChecker 설정 적용
+        koreanChecker.setLayout(prefHangulLayout)
 
         // EnglishConverter 설정 적용
         englishConverter.setLayout(prefEnglishLayout)

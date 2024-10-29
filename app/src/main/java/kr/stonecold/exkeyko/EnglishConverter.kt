@@ -116,7 +116,7 @@ class EnglishConverter {
     }
 
     /**
-     * 설정한 레이아웃에 따라 문자를 변환하는 클래스
+     * 설정한 레이아웃에 따라 문자를 변환하는 메서드
      * @param inputChar 입력 문자
      * @return 출력 문자
      */
