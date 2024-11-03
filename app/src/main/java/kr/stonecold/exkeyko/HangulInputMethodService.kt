@@ -241,12 +241,31 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
         }
 
         // 특수 키 처리
-        if (event.isCtrlPressed || event.isAltPressed || event.isMetaPressed) {
+        if (keyCode == KeyEvent.KEYCODE_CTRL_LEFT || keyCode == KeyEvent.KEYCODE_CTRL_RIGHT ||
+            keyCode == KeyEvent.KEYCODE_ALT_LEFT || keyCode == KeyEvent.KEYCODE_ALT_RIGHT ||
+            keyCode == KeyEvent.KEYCODE_META_LEFT || keyCode == KeyEvent.KEYCODE_META_RIGHT ||
+            keyCode == KeyEvent.KEYCODE_LANGUAGE_SWITCH) {
             if (asciiChar != 0.toChar()) {
                 updateComposingState(inputConnection, true)
                 return super.onKeyDown(keyCode, event)
             }
         }
+
+        // 특수 키 처리
+        if (keyCode in KeyEvent.KEYCODE_F1..KeyEvent.KEYCODE_F12 ||
+            keyCode == KeyEvent.KEYCODE_INSERT ||
+            keyCode == KeyEvent.KEYCODE_HOME || keyCode == KeyEvent.KEYCODE_MOVE_END ||
+            keyCode == KeyEvent.KEYCODE_PAGE_UP || keyCode == KeyEvent.KEYCODE_PAGE_DOWN) {
+            updateComposingState(inputConnection, true)
+            return super.onKeyDown(keyCode, event)
+        }
+
+        //// 방향키 처리 (잘 안먹어서 onKeyUp에서 처리)
+        //if (keyCode in KeyEvent.KEYCODE_DPAD_UP..KeyEvent.KEYCODE_DPAD_CENTER) {
+        //    updateComposingState(inputConnection, true)
+        //    inputConnection.sendKeyEvent(event)
+        //    return true
+        //}
 
         // 한자 입력 처리
         if ((prefUseRightCtrl && keyCode == KeyEvent.KEYCODE_CTRL_RIGHT) ||
@@ -262,14 +281,19 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
             if (processed) {
                 updateComposingState(inputConnection, false)
                 if (hangulInputProcessor.isEmpty()) {
-                    hangulInputProcessor.reset()
                     return super.onKeyDown(keyCode, event)
                 }
                 return true
             }
-        } else if (keyCode == KeyEvent.KEYCODE_SPACE || keyCode == KeyEvent.KEYCODE_ENTER) {
+        } else if (keyCode == KeyEvent.KEYCODE_SPACE) {
             updateComposingState(inputConnection, true)
-            return super.onKeyDown(keyCode, event)
+            inputConnection.commitText(" ", 1)  // Explicitly commit a space character
+            return true
+        } else if (keyCode == KeyEvent.KEYCODE_ENTER) {
+            updateComposingState(inputConnection, true)
+            inputConnection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
+            inputConnection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
+            return true
         } else {
             val asciiCode = if (event.isCapsLockOn) {  event.getUnicodeChar(event.metaState and KeyEvent.META_CAPS_LOCK_ON.inv()) } else { event.unicodeChar }
             if (asciiCode != 0) {
@@ -300,15 +324,12 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
         val inputConnection = currentInputConnection ?: return false
 
         // 방향키 입력 시 강제 커밋
-        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
-            keyCode == KeyEvent.KEYCODE_DPAD_RIGHT ||
-            keyCode == KeyEvent.KEYCODE_DPAD_UP ||
-            keyCode == KeyEvent.KEYCODE_DPAD_DOWN
-        ) {
-            if (!hangulInputProcessor.isEmpty()) {
+        if (keyCode in KeyEvent.KEYCODE_DPAD_UP..KeyEvent.KEYCODE_DPAD_CENTER) {
+            //if (!hangulInputProcessor.isEmpty()) {
                 updateComposingState(inputConnection, true)
-            }
+            //}
         }
+
         return super.onKeyUp(keyCode, event)
     }
 
@@ -433,7 +454,7 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
      * 한글/영문 모드를 전환하는 메서드
      */
     private fun switchLanguageModeToggle() {
-        dismissCandidates()
+        dismissCandidates(true)
         currentImputMode = if (currentImputMode == InputMode.ENGLISH) InputMode.KOREAN else InputMode.ENGLISH
         showLanguageMode()
         Log.d("HangulInputMethodService", "Language mode switched to ${if (currentImputMode == InputMode.KOREAN) "Korean" else "English"}")
