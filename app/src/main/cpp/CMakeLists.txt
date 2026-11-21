@@ -16,6 +16,9 @@ add_library(libhangul
     ${LIBHANGUL_SRC_DIR}/hanja.c
 )
 
+# 외부 키보드 XML 로더와 expat 의존성을 제외하고 내장 키보드 API를 사용한다.
+target_compile_definitions(libhangul PRIVATE ENABLE_EXTERNAL_KEYBOARDS=0)
+
 # JNI와 libhangul을 사용하는 hangul_input_processor.cpp 파일 빌드
 add_library(hangulinputprocessor
     SHARED

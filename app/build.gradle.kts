@@ -3,6 +3,12 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
+composeCompiler {
+    // AGP 9.x requests unpublished compose-group-mapping:2.2.10 for this task.
+    // The Compose mapping is only used to deobfuscate Compose stack traces.
+    includeComposeMappingFile.set(false)
+}
+
 
 val appVersion = providers.gradleProperty("appVersion").orElse("1.0.0").get()
 val appVersionParts = appVersion.split(".").map(String::toInt)

@@ -49,7 +49,7 @@ std::string ucs4_to_utf8(const ucschar* ucs4_str) {
 extern "C"
 JNIEXPORT jint JNICALL
 Java_kr_stonecold_exkeyko_HangulInputProcessor_initialize(JNIEnv *env, jobject obj) {
-    return hangul_init();
+    return JNI_TRUE;
 }
 
 /**
@@ -59,7 +59,7 @@ Java_kr_stonecold_exkeyko_HangulInputProcessor_initialize(JNIEnv *env, jobject o
 extern "C"
 JNIEXPORT jint JNICALL
 Java_kr_stonecold_exkeyko_HangulInputProcessor_finalizeProcessor(JNIEnv *env, jobject obj) {
-    return hangul_fini();
+    return JNI_TRUE;
 }
 
 /**
