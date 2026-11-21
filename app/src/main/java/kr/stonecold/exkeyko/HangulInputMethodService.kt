@@ -434,9 +434,7 @@ class HangulInputMethodService : InputMethodService(), SharedPreferences.OnShare
 
         // 알림 권한 체크
         if (prefInputModeToastMessage) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-            ) {
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 prefInputModeToastMessage = false
             }
         }

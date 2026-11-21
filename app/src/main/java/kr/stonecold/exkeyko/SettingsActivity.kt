@@ -31,6 +31,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.edit
+import androidx.core.net.toUri
 import kr.stonecold.exkeyko.ui.theme.ExKeyKOTheme
 
 /**
@@ -52,10 +54,7 @@ class SettingsActivity : ComponentActivity() {
         val isFirstLaunch = prefs.getBoolean("first_launch", true)
 
         if(isFirstLaunch) {
-            with(prefs.edit()) {
-                putBoolean("first_launch", false)
-                apply()
-            }
+            prefs.edit { putBoolean("first_launch", false) }
 
             if (!Settings.canDrawOverlays(this)
                 || checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -89,10 +88,8 @@ class SettingsActivity : ComponentActivity() {
      */
     fun requestNotificationPermission() {
         if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                @Suppress("LocalVariableName") val REQUEST_NOTIFICATION_PERMISSION = 1001
-                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), REQUEST_NOTIFICATION_PERMISSION)
-            }
+            @Suppress("LocalVariableName") val REQUEST_NOTIFICATION_PERMISSION = 1001
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), REQUEST_NOTIFICATION_PERMISSION)
         }
     }
 
@@ -101,7 +98,7 @@ class SettingsActivity : ComponentActivity() {
      */
     fun requestOverlayPermission() {
         if (!Settings.canDrawOverlays(this)) {
-            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")).apply {
+            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:$packageName".toUri()).apply {
                 putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
             }
             startActivity(intent)
@@ -151,19 +148,13 @@ fun SettingsScreen(context: SettingsActivity) {
     // Overlay 권한이 없으면 한자 변경을 후보키로 합니다.
     if (!Settings.canDrawOverlays(context)) {
         selectedHanjaSelectType = "c"
-        with(prefs.edit()) {
-            putString("pref_hanja_select_type", "c")
-            apply()
-        }
+        prefs.edit { putString("pref_hanja_select_type", "c") }
     }
 
     // 알림 권한이 없으면 Toast 메시지를 false로 설정합니다.
     if (context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
         prefInputModeToastMessage = false
-        with(prefs.edit()) {
-            putBoolean("pref_input_mode_toast_message", false)
-            apply()
-        }
+        prefs.edit { putBoolean("pref_input_mode_toast_message", false) }
     }
 
     val optionEnglishKeyboard = listOf(
@@ -734,12 +725,11 @@ fun openInputMethodSubtypeSettings(context: Context) {
  * @param value 설정 값
  */
 fun savePreference(prefs: SharedPreferences, key: String, value: Any) {
-    with(prefs.edit()) {
+    prefs.edit {
         when (value) {
             is String -> putString(key, value)
             is Boolean -> putBoolean(key, value)
         }
-        apply()
     }
 }
 

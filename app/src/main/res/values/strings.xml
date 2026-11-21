@@ -2,12 +2,9 @@
     <!-- 앱 정보 관련 -->
     <string name="app_name">External Keyboard KO</string>
     <string name="app_title">External Keyboard KO</string>
-    <string name="app_descrption">외장 키보드만을 위한 간단한 한글 입력기입니다.</string>
     <string name="by_stonecold">by StoneCold</string>
 
     <!-- 서브타입 관련 -->
-    <string name="subtype_korean">한국어</string>
-    <string name="subtype_english">English</string>
     <string name="subtype_generic">영어 및 한글</string>
     <string name="subtype_settings_title">한글/영문 사용을 위해 모두 활성화 필요</string>
 
@@ -16,7 +13,6 @@
     <string name="english">영문</string>
 
     <!-- 설정 항목 관련 -->
-    <string name="keyboard_settings_title">키보드 설정</string>
     <string name="input_method_settings_title">입력기 설정</string>
     <string name="keyboard_activation_title">키보드 활성화</string>
     <string name="subtype_select_ttitle">한/영 활성화</string>
@@ -87,10 +83,6 @@
     <string name="msg_permissions">모든 기능 사용을 위해서 알림과 Overlay 권한이 필요합니다.</string>
     <string name="msg_permission_notification">Toast 출력을 위해 알림 권한이 필요합니다.</string>
     <string name="msg_permission_overlay">Overylay 사용을 위해서는 권한이 필요합니다.</string>
-    <string name="msg_post_notifications_grant">알림 권한이 승인되었습니다.</string>
-    <string name="msg_post_notifications_deny">알림 권한이 거부되었습니다.</string>
-    <string name="msg_post_notifications_toast">Toast 알림을 받으려면 권한이 필요합니다.</string>
-
     <!-- 테스트 관련 -->
     <string name="input_test">입력 테스트</string>
     <string name="select">선택</string>
