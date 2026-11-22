@@ -58,7 +58,9 @@ android {
             signingConfig = signingConfigs.getByName("release")
             optimization {
                 enable = true
-                packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
+                // Keep Kotlin runtime classes out of R8's package-scoped optimization.
+                // Optimizing kotlin.** caused IllegalAccessError on app startup on Android 16.
+                packageScope = setOf("androidx.**", "kotlinx.**")
             }
         }
     }
