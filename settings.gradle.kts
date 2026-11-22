@@ -21,5 +21,6 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
+
 rootProject.name = "ExKeyKO"
 include(":app")
