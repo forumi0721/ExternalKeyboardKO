@@ -11,7 +11,7 @@
 
 ## 빌드
 
-로컬 debug APK는 `./build.sh debug`, 서명된 release APK는 `./build.sh release`로 빌드합니다. Release 서명 정보는 로컬 `~/.bin/KeyStore/`에서 읽습니다. GitHub Actions는 별도 workflow에서 빌드합니다.
+로컬 debug APK는 `./build.sh debug`, 서명된 release APK는 `./build.sh release`로 빌드합니다. Release 서명 정보는 로컬 `~/.bin/KeyStore/`에서 읽습니다. GitHub Actions는 별도 workflow에서 빌드합니다. Kotlin Gradle 의존성은 CI 저장소 조회 안정성을 위해 Maven Central 미러를 사용합니다.
 
 ## 소스 코드
 소스 코드는 GitHub에서 확인할 수 있습니다: [External Keyboard KO 소스 코드](https://github.com/forumi0721/ExternalKeyboardKO)
