@@ -213,6 +213,8 @@ fun SettingsScreen(context: SettingsActivity) {
                     Spacer(modifier = Modifier.weight(1f))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
+                AppUpdateCard()
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             item {

@@ -3,6 +3,10 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// Private repositories may provide this file; public repositories work without it.
+val updateToken = rootProject.file("update-token.txt").takeIf { it.isFile }?.readText()?.trim().orEmpty()
+val escapedUpdateToken = updateToken.replace("\\", "\\\\").replace("\"", "\\\"")
+
 val appVersion = providers.gradleProperty("appVersion").orElse("1.0.0").get()
 val appVersionParts = appVersion.split(".").map(String::toInt)
 require(appVersionParts.size == 3 && appVersionParts.all { it in 0..999 }) {
@@ -24,6 +28,7 @@ android {
         targetSdk = 37
         versionCode = computedVersionCode
         versionName = appVersion
+        buildConfigField("String", "GITHUB_TOKEN", "\"$escapedUpdateToken\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
